@@ -1,6 +1,6 @@
 # Custom Ignores
 
-token.txt # Do not share the token to run the bot 
+token.txt
 .vscode
 
 # Byte-compiled / optimized / DLL files
