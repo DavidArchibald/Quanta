@@ -6,6 +6,9 @@ import time
 import datetime
 import os
 
+import helper_functions
+helperCommands = helper_functions.HelperCommands()
+
 class DeveloperCommands:
     """Commands just for the developer, mainly for testing."""
 
@@ -30,10 +33,15 @@ class DeveloperCommands:
         Arguments:
             ctx {commands.Context} -- Information about where the command was run.
         """
-
         await ctx.message.delete()
+
+        confirm = await helperCommands.confirmAction(ctx)
+        if not confirm:
+            return
+
         message = await ctx.send("Goodbye...")
         time.sleep(3) # So that the goodbye message will be seen.
+        
         await message.delete()
         await ctx.bot.logout()
 

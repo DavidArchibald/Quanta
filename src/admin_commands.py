@@ -46,7 +46,7 @@ class AdminCommands:
         """
 
         await ctx.message.delete()
-        confirm=await helperCommands.confirmAction(ctx)
+        confirm = await helperCommands.confirmAction(ctx)
         if not confirm:
             return
         

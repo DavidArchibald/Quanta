@@ -26,9 +26,12 @@ if __name__ == "__main__":
             "wheel"
         ],
         install_requires=[
-            "discord.py==1.0.0a1473",
+            #"discord.py>=1.0.0",
             "fuzzywuzzy==0.16.0",
             "python-Levenshtein==0.12.0",
             "Django==2.0.6"
+        ],
+        dependency_links=[
+            "pip install -U git+https://github.com/Rapptz/discord.py@rewrite#egg=discord.py[voice]"
         ]
     )
