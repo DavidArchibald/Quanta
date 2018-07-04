@@ -4,8 +4,7 @@ import sys
 import discord
 from discord.ext import commands
 
-import helper_functions
-from helper_functions import get_prefix
+from ..helpers import database
 
 class CommandErrorHandler:
     """Handles any errors the bot will throw."""
@@ -24,7 +23,7 @@ class CommandErrorHandler:
         error = getattr(error, "original", error)
         
         content = ctx.message.content
-        prefix = "?" # get_prefix
+        prefix = database.get_prefix()
         command = content \
             .split(" ")[0] \
             [len(prefix):]
@@ -44,9 +43,12 @@ class CommandErrorHandler:
         if isinstance(error, commands.CommandNotFound):
             logging = ctx.bot.get_channel(455579981964115998)
             await ctx.send(error_message)
+
             logging_message = error_message
             embed = discord.Embed()
+
             await logging.send(logging_traceback + "\n" + logging_message)
+            
             return
         elif isinstance(error, commands.DisabledCommand):
             await ctx.send("\"{}\" has been disabled.".format(command))

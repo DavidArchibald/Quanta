@@ -1,10 +1,7 @@
 import discord
 from discord.ext import commands
 
-import helper_functions
-from helper_functions import HelperCommands
-
-from helper_functions import GetUserConverter
+from ..helpers.helper_functions import HelperCommands, GetUserConverter
 
 import asyncio
 
@@ -36,8 +33,8 @@ class AdminCommands:
         
         await ctx.channel.purge(limit=limit, check=check_user)
 
-    @commands.command(aliases=["clearall", "clear_all", "clear-all"])
-    @commands.has_permissions(manage_messages=True)
+    @commands.command(aliases=["clear_all", "clear-all"])
+    @commands.has_permissions(manage_messages = True)
     async def clearAll(self, ctx: commands.Context):
         """Remove all messsages.
         
@@ -55,7 +52,7 @@ class AdminCommands:
         #print(len(await ctx.channel.history(limit=None).flatten()))
 
     @commands.command()
-    @commands.has_permissions(kick_members=True)
+    @commands.has_permissions(kick_members = True)
     async def kick(self, ctx: commands.context, user: GetUserConverter, reason=""):
         """Kick a user.
         
@@ -69,3 +66,14 @@ class AdminCommands:
 
         await ctx.kick(user)
         await ctx.send("kicked {0}".format(user))
+    
+    @commands.command(aliases=["set_prefix", "set-prefix", "prefix", "changeprefix", "change_prefix", "change-prefix"])
+    @commands.has_permissions(manage_channels = True)
+    async def setPrefix(self, ctx: commands.context, prefix: str):
+        """Change the prefix for the channel
+        
+        Arguments:
+            ctx {commands.context} -- [description]
+            prefix {str} -- [description]
+        """
+

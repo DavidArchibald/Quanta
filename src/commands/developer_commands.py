@@ -6,7 +6,7 @@ import time
 import datetime
 import os
 
-import helper_functions
+from ..helpers import helper_functions
 helperCommands = helper_functions.HelperCommands()
 
 class DeveloperCommands:
@@ -58,7 +58,7 @@ class DeveloperCommands:
         os.execv(sys.executable, ["python"] + sys.argv)
         sys.exit()
 
-    @commands.command(hidden=True, aliases=["guildinfo", "guild_info", "guild-info"])
+    @commands.command(hidden=True, aliases=["guild_info", "guild-info"])
     @commands.has_role("Quanta's Owner")
     async def guildInfo(self, ctx: commands.Context):
         """Retrieve info about this guild.
@@ -83,3 +83,16 @@ class DeveloperCommands:
         embed.add_field(name = "Icon URL",   value = guild.icon_url or "This guild has no icon.")
 
         await ctx.send(embed=embed)
+    
+    @commands.command(hidden=True, aliases=["force", "admin"])
+    @commands.has_role("Quanta's Owner")
+    async def sudo(self, ctx: commands.Context):
+        """Force a command to run without perms.
+        
+        Arguments:
+            ctx {commands.Context} -- Informtion about where the command was run.
+        """
+
+        await ctx.message.delete()
+
+        
