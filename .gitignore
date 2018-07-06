@@ -1,6 +1,6 @@
 # Custom Ignores
-secrets/*
-!secrets/README.md
+src/secrets/*
+!src/secrets/README.md
 .vscode
 
 # Byte-compiled / optimized / DLL files
