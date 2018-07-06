@@ -1,6 +1,6 @@
 # Custom Ignores
-
-token.txt
+secrets/*
+!secrets/README.md
 .vscode
 
 # Byte-compiled / optimized / DLL files
