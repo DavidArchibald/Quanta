@@ -9,7 +9,8 @@ class BotEventHandler:
         self.bot = bot
 
     async def on_message(self, message):
-        print(message.content)
+        #print(message.content)
+        pass
 
     async def on_ready(self, *args):
         print("Logged in as")

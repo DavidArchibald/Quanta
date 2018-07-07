@@ -7,20 +7,25 @@ import discord.utils
 import traceback
 import logging
 
-#import src
-from .helpers import database
-from .helpers import helper_functions
+import os
+
+from .helpers import database, helper_functions
 
 from .commands import general_commands, developer_commands, admin_commands
 from .bot_handling import error_handling, bot_event_handling
 
 client = discord.Client()
-bot = commands.Bot(case_insensitive=True, command_prefix=database.get_prefix)
+bot = commands.Bot(case_insensitive=True, command_prefix=lambda bot, message: database.get_prefix(message.guild))
 
 if __name__ == "__main__":
-    tokenFile = open("token.txt", "r")
-    token = tokenFile.read()
-    tokenFile.close()
+    database.connect()
+
+    tokenPath = os.path.join(os.path.dirname(__file__), "secrets/token.txt")
+    with open(tokenPath, "r") as tokenFile:
+        token = tokenFile.read()
+
+    # bot.remove_command("help")
+    # help isn't implemented in this commit, but I've started working on it
 
     helperCommands = helper_functions.HelperCommands()
     developerCommands = developer_commands.DeveloperCommands()
@@ -37,4 +42,4 @@ if __name__ == "__main__":
     bot.add_cog(botEventHandler)
 
     bot.run(token)
-    #client.run(token)
+    # client.run(token)

@@ -23,7 +23,7 @@ class CommandErrorHandler:
         error = getattr(error, "original", error)
         
         content = ctx.message.content
-        prefix = database.get_prefix()
+        prefix = database.get_prefix(ctx.message.guild)
         command = content \
             .split(" ")[0] \
             [len(prefix):]
