@@ -1,5 +1,5 @@
 import setuptools
-from Quanta import __version__
+from src import __version__
 
 with open("README.md", "r") as f:
     long_description = f.read()
@@ -29,9 +29,10 @@ if __name__ == "__main__":
             "fuzzywuzzy==0.16.0",
             "python-Levenshtein==0.12.0",
             "Django==2.0.6",
-            "psycopg==2.18"
+            "psycopg2==2.7.5",
+            "discord.py"
         ],
         dependency_links = [
-            "pip install -U git+https://github.com/Rapptz/discord.py@rewrite#egg=discord.py[voice]"
+            "https://github.com/Rapptz/discord.py@rewrite#egg=discord.py[voice]"
         ]
     )
