@@ -45,19 +45,6 @@ class DeveloperCommands:
         await message.delete()
         await ctx.bot.logout()
 
-    @commands.command(hidden=True, aliases=["restart", "rerun"])
-    @commands.has_role("Quanta's Owner")
-    async def reload(self, ctx: commands.Context):
-        """Reload Quanta
-        
-        Arguments:
-            ctx {commands.Context} -- Information about where the command was run.
-        """
-
-        await ctx.message.add_reaction("✅")
-        os.execv(sys.executable, ["python"] + sys.argv)
-        sys.exit()
-
     @commands.command(hidden=True, aliases=["guild_info", "guild-info"])
     @commands.has_role("Quanta's Owner")
     async def guildInfo(self, ctx: commands.Context):
@@ -71,16 +58,16 @@ class DeveloperCommands:
         embed = discord.Embed()#color="blue")
 
         embed.set_thumbnail(url=guild.icon_url)
-        embed.add_field(name = "Name",       value = guild.name)
-        embed.add_field(name = "ID",         value = guild.id)
-        embed.add_field(name = "Created at", value = guild.created_at.strftime("%x"))
-        embed.add_field(name = "Owner",      value = guild.owner)
-        embed.add_field(name = "Members",    value = guild.member_count)
-        embed.add_field(name = "Channels",   value = len(guild.channels))
-        embed.add_field(name = "Roles",      value = len(guild.role_hierarchy) - 1) # Remove @everyone
-        embed.add_field(name = "Emoji",      value = len(guild.emojis))
-        embed.add_field(name = "Region",     value = guild.region.name)
-        embed.add_field(name = "Icon URL",   value = guild.icon_url or "This guild has no icon.")
+        embed.add_field(name="Name",       value=guild.name)
+        embed.add_field(name="ID",         value=guild.id)
+        embed.add_field(name="Created at", value=guild.created_at.strftime("%x"))
+        embed.add_field(name="Owner",      value=guild.owner)
+        embed.add_field(name="Members",    value=guild.member_count)
+        embed.add_field(name="Channels",   value=len(guild.channels))
+        embed.add_field(name="Roles",      value=len(guild.role_hierarchy) - 1) # Remove @everyone
+        embed.add_field(name="Emoji",      value=len(guild.emojis))
+        embed.add_field(name="Region",     value=guild.region.name)
+        embed.add_field(name="Icon URL",   value=guild.icon_url or "This guild has no icon.")
 
         await ctx.send(embed=embed)
     
