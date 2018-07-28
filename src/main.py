@@ -8,38 +8,50 @@ import traceback
 import logging
 
 import os
+import sys
 
-from .helpers import database, helper_functions
+import asyncio
 
+import yaml
+
+from .helpers import database_helper, helper_functions
 from .commands import general_commands, developer_commands, admin_commands
 from .bot_handling import error_handling, bot_event_handling
 
-client = discord.Client()
-bot = commands.Bot(case_insensitive=True, command_prefix=lambda bot, message: database.get_prefix(message.guild))
+async def _get_prefix(bot, message):
+    prefix = await database.get_prefix(message.channel)
+    return prefix
+
+database = database_helper.Database()
+bot = commands.Bot(case_insensitive=True, command_prefix=_get_prefix)
 
 if __name__ == "__main__":
-    database.connect()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(database.connect())
 
-    tokenPath = os.path.join(os.path.dirname(__file__), "secrets/token.txt")
-    with open(tokenPath, "r") as tokenFile:
-        token = tokenFile.read()
+    #bot.loop.set_debug(True)
+    config_path = os.path.join(os.path.dirname(__file__), "secrets/config.yaml")
 
-    # bot.remove_command("help")
-    # help isn't implemented in this commit, but I've started working on it
+    with open(config_path, "r") as config_file:
+        config = yaml.safe_load(config_file)
+    
+    bot_info = config["bot_info"]
+    token = bot_info["token"]
+    
+    bot.remove_command("help")
 
-    helperCommands = helper_functions.HelperCommands()
-    developerCommands = developer_commands.DeveloperCommands()
-    generalCommands = general_commands.GeneralCommands()
-    adminCommands = admin_commands.AdminCommands()
-    commandErrorHandler = error_handling.CommandErrorHandler()
-    botEventHandler = bot_event_handling.BotEventHandler(bot)
+    helper_commands = helper_functions.HelperCommands()
+    developer_commands = developer_commands.DeveloperCommands(database)
+    general_commands = general_commands.GeneralCommands(database)
+    admin_commands = admin_commands.AdminCommands(database)
+    command_error_handler = error_handling.CommandErrorHandler(database)
+    bot_event_handler = bot_event_handling.BotEventHandler(bot)
 
-    bot.add_cog(helperCommands)
-    bot.add_cog(developerCommands)
-    bot.add_cog(generalCommands)
-    bot.add_cog(adminCommands)
-    bot.add_cog(commandErrorHandler)
-    bot.add_cog(botEventHandler)
+    bot.add_cog(helper_commands)
+    bot.add_cog(developer_commands)
+    bot.add_cog(general_commands)
+    bot.add_cog(admin_commands)
+    bot.add_cog(command_error_handler)
+    bot.add_cog(bot_event_handler)
 
     bot.run(token)
-    # client.run(token)

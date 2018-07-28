@@ -30,6 +30,7 @@ if __name__ == "__main__":
             "python-Levenshtein==0.12.0",
             "Django==2.0.6",
             "psycopg2==2.7.5",
+			"asyncpg==0.17.0",
             "discord.py"
         ],
         dependency_links = [

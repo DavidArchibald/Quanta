@@ -6,11 +6,13 @@ import time
 import datetime
 import os
 
-from ..helpers import helper_functions
-helperCommands = helper_functions.HelperCommands()
+from ..helpers.helper_functions import confirm_action
 
 class DeveloperCommands:
     """Commands just for the developer, mainly for testing."""
+
+    def __init__(self, database):
+        self.database = database
 
     @commands.command(hidden=True, aliases=["speak"])
     @commands.has_role("Quanta's Owner")
@@ -33,16 +35,12 @@ class DeveloperCommands:
         Arguments:
             ctx {commands.Context} -- Information about where the command was run.
         """
-        await ctx.message.delete()
 
-        confirm = await helperCommands.confirmAction(ctx)
+        confirm = await confirm_action(ctx)
         if not confirm:
             return
 
         message = await ctx.send("Goodbye...")
-        time.sleep(3) # So that the goodbye message will be seen.
-        
-        await message.delete()
         await ctx.bot.logout()
 
     @commands.command(hidden=True, aliases=["guild_info", "guild-info"])
@@ -71,15 +69,31 @@ class DeveloperCommands:
 
         await ctx.send(embed=embed)
     
-    @commands.command(hidden=True, aliases=["force", "admin"])
+    @commands.command(hidden=True, aliases=["force", "dev"])
     @commands.has_role("Quanta's Owner")
-    async def sudo(self, ctx: commands.Context):
+    async def sudo(self, ctx: commands.Context, quiet: bool=True, *args):
         """Force a command to run without perms.
         
         Arguments:
             ctx {commands.Context} -- Informtion about where the command was run.
+            quiet {bool} -- Whether to run silently or not.
+
+        """
+        if quiet == True:
+            await ctx.message.delete()
+        
+    @commands.command(hidden=True, aliases=["run"])  
+    async def eval(self, ctx: commands.Context, quiet: bool=False):
+        """[summary]
+        
+        Arguments:
+            ctx {commands.Context} -- [description]
+            quiet {bool} -- [description] (default: {False})
         """
 
-        await ctx.message.delete()
+        pass
 
-        
+
+    async def __local_check(self, ctx):
+        return await ctx.bot.is_owner(ctx.author)
+

@@ -4,16 +4,17 @@ import sys
 import discord
 from discord.ext import commands
 
-from ..helpers import database
-
 class CommandErrorHandler:
     """Handles any errors the bot will throw."""
+
+    def __init__(self, database):
+        self.database = database
 
     async def on_command_error(self, ctx: commands.Context, error: Exception):
         """The event triggered when an error is raised while invoking a command.
         
         Arguments:
-            ctx {commands.Context} -- Information about where the command is run.
+            ctx {commands.Context} -- Information about where the command was run.s
             error {Exception} -- The error the bot comes across.
         """
 
@@ -23,7 +24,7 @@ class CommandErrorHandler:
         error = getattr(error, "original", error)
         
         content = ctx.message.content
-        prefix = database.get_prefix(ctx.message.guild)
+        prefix = await self.database.get_prefix(ctx)
         command = content \
             .split(" ")[0] \
             [len(prefix):]
@@ -32,23 +33,16 @@ class CommandErrorHandler:
         logging_message = None
         logging_traceback = "{author}(id: {author_id}) said \"{message}\" in the guild {guild}(id: {guild_id}) within the channel {channel}(id: {channel_id})" \
             .format(
-                author = ctx.message.author,
-                author_id = ctx.message.author.id,
-                message = ctx.message.content,
-                guild = ctx.message.guild,
-                guild_id = ctx.message.guild.id,
-                channel = ctx.message.channel,
+                author     = ctx.message.author,
+                author_id  = ctx.message.author.id,
+                message    = ctx.message.content,
+                guild      = ctx.message.guild,
+                guild_id   = ctx.message.guild.id,
+                channel    = ctx.message.channel,
                 channel_id = ctx.message.channel.id,
             )
         if isinstance(error, commands.CommandNotFound):
-            logging = ctx.bot.get_channel(455579981964115998)
-            await ctx.send(error_message)
-
-            logging_message = error_message
-            embed = discord.Embed()
-
-            await logging.send(logging_traceback + "\n" + logging_message)
-            
+            pass
             return
         elif isinstance(error, commands.DisabledCommand):
             await ctx.send("\"{}\" has been disabled.".format(command))

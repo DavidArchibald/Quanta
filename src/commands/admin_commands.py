@@ -1,29 +1,29 @@
 import discord
 from discord.ext import commands
 
-from ..helpers.helper_functions import HelperCommands, GetUserConverter
+from ..helpers import helper_functions
+from ..helpers.helper_functions import GetUserConverter, confirm_action
 
 import asyncio
-
-helperCommands = HelperCommands()
 
 class AdminCommands:
     """Special commands just for Admins."""
 
+    def __init__(self, database):
+        self.database = database
+
     @commands.command()
     @commands.has_permissions(manage_messages=True)
-    async def purge(self, ctx: commands.Context, limit: int = 100, user: GetUserConverter = "all"):
+    async def purge(self, ctx: commands.Context, limit: int=100, user: GetUserConverter="all"):
         """Deletes a number of messages by a user.
         
         Arguments:
-            ctx {commands.context} -- Information about where the command was run.
+            ctx {commands.Context} -- Information about where the command was run.
         
         Keyword Arguments:
             limit {int} -- The max number of messages to purge (default: {100})
             user {GetUserConverter} -- Fuzzy user getting (default: {"all"})
         """
-
-        await ctx.message.delete()
         
         if user == None or user.casefold() == "all":
             await ctx.channel.purge(limit=limit)
@@ -33,23 +33,22 @@ class AdminCommands:
         
         await ctx.channel.purge(limit=limit, check=check_user)
 
-    @commands.command(aliases=["clear_all", "clear-all"])
+    @commands.command(aliases=["clearall", "clear-all"])
     @commands.has_permissions(manage_messages = True)
-    async def clearAll(self, ctx: commands.Context):
+    async def clear_all(self, ctx: commands.Context):
         """Remove all messsages.
         
         Arguments:
             ctx {commands.Context} -- Information about where the command was run.
         """
 
-        await ctx.message.delete()
-        confirm = await helperCommands.confirmAction(ctx)
+        confirm = await confirm_action(ctx)
+
         if not confirm:
             return
         
         async for message in ctx.channel.history(limit=None):
             await message.delete()
-        #print(len(await ctx.channel.history(limit=None).flatten()))
 
     @commands.command()
     @commands.has_permissions(kick_members = True)
@@ -58,7 +57,7 @@ class AdminCommands:
         
         Arguments:
             ctx {commands.context} -- Information about where a command was run.
-            user {GetUserConverter} -- Fuzzy user getting.
+            user {discord.User} -- Gets a `discord.User` using fuzzy conversion.
         
         Keyword Arguments:
             reason {str} -- Why the user is being kicked (default: {""})
@@ -67,13 +66,21 @@ class AdminCommands:
         await ctx.kick(user)
         await ctx.send("kicked {0}".format(user))
     
-    @commands.command(aliases=["set_prefix", "set-prefix", "prefix", "changeprefix", "change_prefix", "change-prefix"])
+    @commands.command(aliases=["setprefix", "set-prefix", "prefix", "changeprefix", "change_prefix", "change-prefix"])
     @commands.has_permissions(manage_channels = True)
-    async def setPrefix(self, ctx: commands.context, prefix: str):
+    async def set_prefix(self, ctx: commands.context, prefix: str):
         """Change the prefix for the channel
         
         Arguments:
-            ctx {commands.context} -- [description]
-            prefix {str} -- [description]
+            ctx {commands.context} -- Information about where a command was run.
+            prefix {str} -- The prefix to set the guild to use.
         """
 
+        if prefix == "":
+            if ctx.prefix == "":
+                await ctx.send("This channel already has no prefix.")
+            else:
+                await confirm_action(ctx, "Are you sure you want to set the prefix to none in this channel.")
+            return
+        
+        await self.database.set_prefix(ctx, prefix)
