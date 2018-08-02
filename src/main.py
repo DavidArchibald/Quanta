@@ -20,7 +20,7 @@ import yaml
 
 from .helpers import database_helper, helper_functions
 from .cogs import general_cog, developer_cog, admin_cog
-from .bot_handling import bot_event_handling, error_handling
+from .handlers import event_handling, error_handling
 
 
 async def get_prefix_wrapper(bot, message):
@@ -68,13 +68,13 @@ if __name__ == "__main__":
     general_commands = general_cog.GeneralCommands(database)
     admin_commands = admin_cog.AdminCommands(database)
     command_error_handler = error_handling.CommandErrorHandler(database)
-    bot_event_handler = bot_event_handling.BotEventHandler(bot)
+    event_handler = event_handling.BotEventHandler(bot)
 
     bot.add_cog(helper_commands)
     bot.add_cog(developer_commands)
     bot.add_cog(general_commands)
     bot.add_cog(admin_commands)
     bot.add_cog(command_error_handler)
-    bot.add_cog(bot_event_handler)
+    bot.add_cog(event_handler)
 
     bot.run(token)
