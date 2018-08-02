@@ -35,12 +35,6 @@ class HelperCommands:
             *emoji {str} -- Get the message
         """
 
-        # emoji = ' '.join(emoji)
-        # emoji = unicode(emoji, "utf-8") # Emojis are above the normal planes so could normally be counted as multiple characters
-
-        # if len(emoji) > 1:
-
-        # else:
         await ctx.send(ctx.bot.emojis)
         await ctx.send(discord.utils.get(ctx.bot.get_all_emojis(), name=emoji))
 

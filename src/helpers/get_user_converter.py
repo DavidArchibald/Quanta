@@ -17,7 +17,7 @@ class GetUserConverter(commands.Converter):
 
     async def convert(self, ctx: commands.context, identifier: str):
         result_count = 3  # Trim the results to be 3
-        # This will only support up to 10
+        # This will only support up to 10 results.
         # A possible fix would be "pages"
 
         if identifier == None or identifier == "":
@@ -37,10 +37,10 @@ class GetUserConverter(commands.Converter):
             return user
         except:
             # Ignore any error it gives out.
-            # This is only for efficency.
+            # This is only for efficiency.
             pass
 
-        # if in format <@{user id}> get only the user id.
+        # If in format <@{user id}> get only the user id.
         if identifier.startswith("<@") and identifier.endswith(">"):
             identifier = identifier[2:-1]
 
@@ -72,25 +72,7 @@ class GetUserConverter(commands.Converter):
         # Sort from closest to farthest ratio
         result = sorted(result, key=lambda item: item["compare_ratio"], reverse=True)
         result = result[:result_count]  # Truncate to the top `result_count`
-        # Filtering the result to a resonable threshold could also help
-        # whom = await ctx.send(
-        #             "**Do you mean:**\n"
-        #             "{}"
-        #             "".format('\n'.join(
-        #                        # Results in lines of "n. closest_compare (member_name#member_discriminator)"
-        #                        [
-        #                            # Format the "n. " part (index + 1)
-        #                            str(index + 1) + ". " + \
-        #                            # Add the closest compare
-        #                            item["closest_compare"] + \
-        #                            # str(member) gives "username#discriminator"
-        #                            " (" + str(item["member"]) + ")" \
-        #                            # Loop through all of the results
-        #                            for index, item in enumerate(result)
-        #                        ]
-        #                    )
-        #                )
-        #         )
+        # Filtering the result to a reasonable threshold could also help)
         embed = discord.Embed()
         for i, item in enumerate(result):
             index = str(i + 1)

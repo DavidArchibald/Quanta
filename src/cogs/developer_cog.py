@@ -24,7 +24,7 @@ class DeveloperCommands:
 
         Arguments:
             ctx {commands.Context} -- Information about where the command was run.
-            text {str} -- The text for the bot to say.      
+            text {str} -- The text for the bot to say.
         """
 
         await ctx.message.delete()
@@ -58,7 +58,7 @@ class DeveloperCommands:
         """
 
         guild = ctx.guild
-        embed = discord.Embed()  # color="blue")
+        embed = discord.Embed()
 
         embed.set_thumbnail(url=guild.icon_url)
         embed.add_field(name="Name", value=guild.name)
@@ -86,7 +86,7 @@ class DeveloperCommands:
         """Force a command to be run without perms from the user.
 
         Arguments:
-            ctx {commands.Context} -- Informtion about where the command was run.
+            ctx {commands.Context} -- Information about where the command was run.
             quiet {bool} -- Whether to run silently or not.
 
         """
@@ -98,7 +98,7 @@ class DeveloperCommands:
         """Runs arbitrary code.
 
         Arguments:
-            ctx {commands.Context} -- Informtion about where the command was run.
+            ctx {commands.Context} -- Information about where the command was run.
             quiet {bool} -- [description] (default: {False})
         """
 

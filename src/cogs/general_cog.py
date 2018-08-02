@@ -36,7 +36,7 @@ class GeneralCommands:
         elif isinstance(round_to, str) and round_to.isdigit():
             pingTime = round(ctx.bot.latency, int(round_to))
         else:
-            pingTime = round(ctx.bot.latency, 4)  # fallback
+            pingTime = round(ctx.bot.latency, 4)
 
         await ctx.send("Pong! | {0} seconds".format(pingTime))
 
@@ -61,7 +61,7 @@ class GeneralCommands:
             for _, member in members:
                 if not isinstance(member, commands.Command):
                     continue
-                command = member  # just a stylistic thing, no need for it.
+                command = member
                 command_usage = member.usage
                 if command.hidden == True:
                     continue

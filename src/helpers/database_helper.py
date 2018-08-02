@@ -35,7 +35,7 @@ def with_connection():
                 )
 
             async with self._pool.acquire() as connection:
-                # in case something wants to overide it(testing?)
+                # In case something wants to overide it(testing?)
                 if not hasattr(kwargs, "connection"):
                     kwargs["connection"] = connection
 
@@ -48,11 +48,11 @@ def with_connection():
 
 class Database:
     def __init__(self, db_info_path=None):
-        # go up a directory to the source
+        # Go up a directory to the source
         source = os.path.dirname(os.path.dirname(__file__))
         database_info_path = db_info_path or os.path.join(
             source, "secrets\\config.yaml"
-        )  # ends up with ./src/secrets/config.yaml
+        )  # Ends up with ./src/secrets/config.yaml
         with open(database_info_path, "r") as database_info_file:
             config = yaml.safe_load(database_info_file)
             database_info = config["database_info"]
@@ -66,7 +66,7 @@ class Database:
         self._pool = await asyncpg.create_pool(**self._database_info)
 
     async def get_prefix(self, ctx: commands.context):
-        """Get's the channel's prefix for running with 
+        """Gets the channel's prefix for running with
 
         Arguments:
             ctx {commands.context} -- Information about where the command was run.
@@ -76,12 +76,12 @@ class Database:
         """
         channel = (
             ctx if isinstance(ctx, discord.abc.GuildChannel) else ctx.message.channel
-        )  # because some code is forced to pass in a channel
+        )  # Because some code is forced to pass in a channel
         guild_id = str(channel.guild.id)
 
         prefix = self.cache.get(guild_id)
         if prefix == -1:
-            # calling this directly won't cache it.
+            # Calling this directly won't cache it.
             prefix = await self._get_prefix(guild_id)
 
             self.cache.set(guild_id, prefix)
@@ -96,7 +96,7 @@ class Database:
 
         if row is None:
             async with connection.transaction():
-                # default prefix
+                # Default prefix is "?"
                 await connection.execute(
                     "INSERT INTO prefixes VALUES ($1, $2)", guild_id, "?"
                 )
