@@ -3,8 +3,8 @@ class CacheNode(object):
         self.key = key
         self.value = value
         self.freq_node = freq_node
-        self.pre = pre # previous CacheNode
-        self.nxt = nxt # next CacheNode
+        self.pre = pre  # previous CacheNode
+        self.nxt = nxt  # next CacheNode
 
     def free_myself(self):
         if self.freq_node.cache_head == self.freq_node.cache_tail:
@@ -23,13 +23,14 @@ class CacheNode(object):
         self.nxt = None
         self.freq_node = None
 
+
 class FreqNode(object):
     def __init__(self, freq, pre, nxt):
         self.freq = freq
-        self.pre = pre # previous FreqNode
-        self.nxt = nxt # next FreqNode
-        self.cache_head = None # CacheNode head under this FreqNode
-        self.cache_tail = None # CacheNode tail under this FreqNode
+        self.pre = pre  # previous FreqNode
+        self.nxt = nxt  # next FreqNode
+        self.cache_head = None  # CacheNode head under this FreqNode
+        self.cache_tail = None  # CacheNode tail under this FreqNode
 
     def count_caches(self):
         if self.cache_head is None and self.cache_tail is None:
@@ -37,7 +38,7 @@ class FreqNode(object):
         elif self.cache_head == self.cache_tail:
             return 1
         else:
-            return '2+'
+            return "2+"
 
     def remove(self):
         if self.pre is not None:
@@ -81,24 +82,24 @@ class FreqNode(object):
 
         if self.nxt is not None:
             self.nxt.pre = freq_node
-        
+
         self.nxt = freq_node
 
     def insert_before_me(self, freq_node):
         if self.pre is not None:
             self.pre.nxt = freq_node
-        
+
         freq_node.pre = self.pre
         freq_node.nxt = self
         self.pre = freq_node
-        
-class LFUCache(object):
 
+
+class LFUCache(object):
     def __init__(self, capacity):
-        self.cache = {} # {key: cache_node}
+        self.cache = {}  # {key: cache_node}
         self.capacity = capacity
         self.freq_link_head = None
-    
+
     def get(self, key):
         if key in self.cache:
             cache_node = self.cache[key]
@@ -114,7 +115,7 @@ class LFUCache(object):
     def set(self, key, value):
         if self.capacity <= 0:
             return -1
-        
+
         if key not in self.cache:
             if len(self.cache) >= self.capacity:
                 self.dump_cache()
@@ -134,13 +135,12 @@ class LFUCache(object):
         else:
             target_freq_node = freq_node.nxt
             target_empty = False
-        
+
         cache_node.free_myself()
         target_freq_node.append_cache_to_tail(cache_node)
 
         if target_empty:
             freq_node.insert_after_me(target_freq_node)
-
 
         if freq_node.count_caches() == 0:
             if self.freq_link_head == freq_node:
@@ -160,14 +160,14 @@ class LFUCache(object):
     def create_cache(self, key, value):
         cache_node = CacheNode(key, value, None, None, None)
         self.cache[key] = cache_node
-        
+
         if self.freq_link_head is None or self.freq_link_head.freq != 0:
             new_freq_node = FreqNode(0, None, None)
             new_freq_node.append_cache_to_tail(cache_node)
 
             if self.freq_link_head is not None:
                 self.freq_link_head.insert_before_me(new_freq_node)
-            
+
             self.freq_link_head = new_freq_node
         else:
             self.freq_link_head.append_cache_to_tail(cache_node)

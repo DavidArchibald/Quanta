@@ -4,12 +4,13 @@ from discord.ext import commands
 import traceback
 import logging
 
+
 class BotEventHandler:
     def __init__(self, bot):
         self.bot = bot
 
     async def on_message(self, message):
-        #print(message.content)
+        # print(message.content)
         pass
 
     async def on_ready(self, *args):
@@ -20,9 +21,9 @@ class BotEventHandler:
 
     async def on_error(self, event, *args, **kwargs):
         print("error!")
-        #message = args[0]
+        # message = args[0]
         error = traceback.format_exc()
         logging.warning(error)
-        #await discord.Object(id="455870821450383361").send(
+        # await discord.Object(id="455870821450383361").send(
         #    "```{0}``` %s".format(error)
-        #)
+        # )

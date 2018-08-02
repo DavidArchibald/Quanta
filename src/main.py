@@ -6,6 +6,7 @@ import discord.utils
 
 import traceback
 import logging
+import logging.handlers
 
 import os
 import sys
@@ -15,35 +16,44 @@ import asyncio
 import yaml
 
 from .helpers import database_helper, helper_functions
-from .commands import general_commands, developer_commands, admin_commands
-from .bot_handling import error_handling, bot_event_handling
+from .cogs import general_cog, developer_cog, admin_cog
+from .bot_handling import bot_event_handling, error_handling
 
-async def _get_prefix(bot, message):
+
+async def get_prefix_wrapper(bot, message):
     prefix = await database.get_prefix(message.channel)
     return prefix
 
+
 database = database_helper.Database()
-bot = commands.Bot(case_insensitive=True, command_prefix=_get_prefix)
+bot = commands.Bot(case_insensitive=True, command_prefix=get_prefix_wrapper)
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(database.connect())
 
-    #bot.loop.set_debug(True)
+    # bot.loop.set_debug(True)
+    logger = logging.getLogger("Discord Logger")
+    logger.setLevel(logging.INFO)
+
+    handler = logging.handlers.RotatingFileHandler(
+        "bot.log", maxBytes=10000, backupCount=5
+    )
+
     config_path = os.path.join(os.path.dirname(__file__), "secrets/config.yaml")
 
     with open(config_path, "r") as config_file:
         config = yaml.safe_load(config_file)
-    
+
     bot_info = config["bot_info"]
     token = bot_info["token"]
-    
+
     bot.remove_command("help")
 
     helper_commands = helper_functions.HelperCommands()
-    developer_commands = developer_commands.DeveloperCommands(database)
-    general_commands = general_commands.GeneralCommands(database)
-    admin_commands = admin_commands.AdminCommands(database)
+    developer_commands = developer_cog.DeveloperCommands(database)
+    general_commands = general_cog.GeneralCommands(database)
+    admin_commands = admin_cog.AdminCommands(database)
     command_error_handler = error_handling.CommandErrorHandler(database)
     bot_event_handler = bot_event_handling.BotEventHandler(bot)
 
