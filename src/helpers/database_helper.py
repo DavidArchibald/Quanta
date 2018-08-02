@@ -13,8 +13,9 @@ import json
 import functools
 import inspect
 
-from .cache import LFUCache  # "Least Recently Used (LRU) cache"
+from .cache import LFUCache
 
+# "Least Recently Used (LRU) cache"
 # Caches a (key, value) pair by how much it has been used recently.
 
 from .helper_functions import HelperCommands
