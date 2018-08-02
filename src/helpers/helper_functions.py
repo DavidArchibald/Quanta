@@ -1,13 +1,15 @@
+#!/usr/bin/env python3
+# -*- coding: UTF-8 -*-
+
+import asyncio
+
 import discord
 from discord.ext import commands
 
-import asyncio
+import operator
 import re
 
-import operator
-
 from .get_user_converter import GetUserConverter
-import asyncio
 
 
 class HelperCommands:

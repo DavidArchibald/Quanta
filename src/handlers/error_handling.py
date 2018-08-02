@@ -1,5 +1,8 @@
-import traceback
+#!/usr/bin/env python3
+# -*- coding: UTF-8 -*-
+
 import sys
+import traceback
 
 import discord
 from discord.ext import commands

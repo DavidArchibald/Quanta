@@ -1,10 +1,13 @@
+#!/usr/bin/env python3
+# -*- coding: UTF-8 -*-
+
 import discord
 from discord.ext import commands
 
-import sys
-import time
 import datetime
 import os
+import sys
+import time
 
 from ..helpers.helper_functions import confirm_action
 

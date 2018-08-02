@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: UTF-8 -*-
+
 """A Discord.py bot."""
 
 import discord
@@ -9,9 +12,9 @@ import logging
 import logging.handlers
 
 import os
-import sys
-
 import asyncio
+
+import sys
 
 import yaml
 
@@ -21,8 +24,7 @@ from .bot_handling import bot_event_handling, error_handling
 
 
 async def get_prefix_wrapper(bot, message):
-    prefix = await database.get_prefix(message.channel)
-    return prefix
+    return await database.get_prefix(message.channel)
 
 
 database = database_helper.Database()
@@ -32,13 +34,24 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(database.connect())
 
-    # bot.loop.set_debug(True)
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+
     logger = logging.getLogger("Discord Logger")
     logger.setLevel(logging.INFO)
 
-    handler = logging.handlers.RotatingFileHandler(
+    log_handler = logging.handlers.RotatingFileHandler(
         "bot.log", maxBytes=10000, backupCount=5
     )
+    log_handler.setFormatter(formatter)
+
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setLevel(logging.WARN)
+    stream_handler.setFormatter(stream_handler)
+
+    logger.addHandler(log_handler)
+    logger.addHandler(stream_handler)
 
     config_path = os.path.join(os.path.dirname(__file__), "secrets/config.yaml")
 

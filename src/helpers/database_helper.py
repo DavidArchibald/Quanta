@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: UTF-8 -*-
+
 import discord
 from discord.ext import commands
 
@@ -7,16 +10,15 @@ import asyncpg
 import os
 import time
 
-import yaml
 import json
+import yaml
 
 import functools
 import inspect
 
-from .cache import LFUCache
-
 # "Least Recently Used (LRU) cache"
 # Caches a (key, value) pair by how much it has been used recently.
+from .cache import LFUCache
 
 from .helper_functions import HelperCommands
 

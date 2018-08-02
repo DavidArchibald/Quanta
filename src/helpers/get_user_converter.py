@@ -1,8 +1,11 @@
-import fuzzywuzzy
-from fuzzywuzzy import fuzz
+#!/usr/bin/env python3
+# -*- coding: UTF-8 -*-
 
 import discord
 from discord.ext import commands
+
+import fuzzywuzzy
+from fuzzywuzzy import fuzz
 
 
 class GetUserConverter(commands.Converter):

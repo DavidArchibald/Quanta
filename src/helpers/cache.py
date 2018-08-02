@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+# -*- coding: UTF-8 -*-
+
+"""Code by Shang Wang(epicshane) from the gist https://gist.github.com/epicshane/032c25c78fbe6d20607a28c1a1930761#file-cachenode_freqnode-py
+"""
+
+
 class CacheNode(object):
     def __init__(self, key, value, freq_node, pre, nxt):
         self.key = key

@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: UTF-8 -*-
+
 import discord
 from discord.ext import commands
 
@@ -5,8 +8,8 @@ from ..helpers import simple_paginator
 from ..helpers.simple_paginator import SimplePaginator
 
 import inspect
-import textwrap
 import re
+import textwrap
 
 
 class GeneralCommands:
@@ -54,7 +57,9 @@ class GeneralCommands:
             description="Quanta is a multipurpose bot for simplifying your life.",
         )
         for name, cog in ctx.bot.cogs.items():
-            name = re.sub("([a-z])(?=[A-Z])", r"\1 ", name)
+            name = re.sub(
+                "([a-z])(?=[A-Z])", r"\1 ", name
+            )  # Turns PascalCase to Title Case
             members = inspect.getmembers(cog)
             description = ""
             icon = getattr(cog, "icon", None)

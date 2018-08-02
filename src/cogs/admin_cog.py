@@ -1,10 +1,13 @@
+#!/usr/bin/env python3
+# -*- coding: UTF-8 -*-
+
+import asyncio
+
 import discord
 from discord.ext import commands
 
 from ..helpers import helper_functions
 from ..helpers.helper_functions import GetUserConverter, confirm_action
-
-import asyncio
 
 
 class AdminCommands:
@@ -98,7 +101,7 @@ class AdminCommands:
             else:
                 await confirm_action(
                     ctx,
-                    "Are you sure you want to set the prefix to none in this channel.",
+                    "Are you sure you want to set the prefix to none in this channel?",
                 )
             return
 
