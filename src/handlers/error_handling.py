@@ -22,7 +22,7 @@ class CommandErrorHandler:
             error {Exception} -- The error the bot comes across.
         """
 
-        if hasattr(ctx.command, "on_error"):  # To prevent recursiveness.
+        if hasattr(ctx.command, "on_error"):  #
             return
 
         error = getattr(error, "original", error)
@@ -31,33 +31,25 @@ class CommandErrorHandler:
         prefix = await self.database.get_prefix(ctx)
         command = content.split(" ")[0][len(prefix) :]
 
-        error_message = '"{}" is an unknown command.'.format(command)
+        error_message = f'"{command}" is an unknown command.'
         logging_message = None
-        logging_traceback = '{author}(id: {author_id}) said "{message}" in the guild {guild}(id: {guild_id}) within the channel {channel}(id: {channel_id})'.format(
-            author=ctx.message.author,
-            author_id=ctx.message.author.id,
-            message=ctx.message.content,
-            guild=ctx.message.guild,
-            guild_id=ctx.message.guild.id,
-            channel=ctx.message.channel,
-            channel_id=ctx.message.channel.id,
-        )
+        logging_traceback = f'{ctx.author}(id: {ctx.author.id}) said "{ctx.message}" in the guild {ctx.guild}(id: {ctx.guild.id}) within the channel {ctx.channel}(id: {ctx.channel.id})'
         if isinstance(error, commands.CommandNotFound):
             pass
             return
         elif isinstance(error, commands.DisabledCommand):
-            await ctx.send('"{}" has been disabled.'.format(command))
+            await ctx.send(f'"{command}" has been disabled.')
             return
         elif isinstance(error, commands.NoPrivateMessage):
             try:
                 await ctx.send(
-                    '"{}" cannot be used in Private Messages.'.format(command)
+                    f'"{command}" cannot be used in Private Messages.'
                 )
                 return
             except discord.Forbidden:
                 pass
 
-        print("Ignoring exception in command {}:".format(ctx.command), file=sys.stderr)
+        print(f"Ignoring exception in command {ctx.command}:", file=sys.stderr)
         traceback.print_exception(
             type(error), error, error.__traceback__, file=sys.stderr
         )

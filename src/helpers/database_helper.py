@@ -31,9 +31,7 @@ def with_connection():
         async def get_connection(self, *args, **kwargs):
             if self._pool is None:
                 raise RuntimeError(
-                    "The function {} wasn't run because the database isn't connected to.".format(
-                        method.__name__
-                    )
+                    "The function {method.__name__} wasn't run because the database isn't connected to."
                 )
 
             async with self._pool.acquire() as connection:

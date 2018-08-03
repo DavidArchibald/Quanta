@@ -8,17 +8,16 @@ from discord.ext import commands
 import discord.utils
 
 import traceback
-import logging
-import logging.handlers
 
 import os
 import asyncio
 
 import sys
+import logging
 
 import yaml
 
-from .helpers import database_helper, helper_functions
+from .helpers import database_helper, helper_functions, logs_helper
 from .cogs import general_cog, developer_cog, admin_cog
 from .handlers import event_handling, error_handling
 
@@ -34,24 +33,7 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(database.connect())
 
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-
-    logger = logging.getLogger("Discord Logger")
-    logger.setLevel(logging.INFO)
-
-    log_handler = logging.handlers.RotatingFileHandler(
-        "bot.log", maxBytes=10000, backupCount=5
-    )
-    log_handler.setFormatter(formatter)
-
-    stream_handler = logging.StreamHandler(sys.stdout)
-    stream_handler.setLevel(logging.WARN)
-    stream_handler.setFormatter(stream_handler)
-
-    logger.addHandler(log_handler)
-    logger.addHandler(stream_handler)
+    #logs_helper.start_logging()
 
     config_path = os.path.join(os.path.dirname(__file__), "secrets/config.yaml")
 

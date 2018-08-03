@@ -80,9 +80,7 @@ class GetUserConverter(commands.Converter):
         for i, item in enumerate(result):
             index = str(i + 1)
             embed.add_field(
-                name="{index}. {compare}".format(
-                    index=index, compare=item["closest_compare"]
-                ),
+                name=f"{index}. {item['closest_compare']}",
                 value=item["member"].name,
                 inline=False,
             )

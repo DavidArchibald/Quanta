@@ -72,22 +72,11 @@ class AdminCommands:
         """
 
         await ctx.kick(user)
-        await ctx.send("kicked {0}".format(user))
+        await ctx.send(f"kicked {user}")
 
-    @commands.command(
-        aliases=[
-            "setprefix",
-            "set-prefix",
-            "set prefix",
-            "changeprefix",
-            "change_prefix",
-            "change-prefix",
-            "change prefix",
-        ],
-        usage="setprefix [prefix]",
-    )
+    @commands.command(aliases=["setprefix", "set-prefix", "changeprefix", "change_prefix", "change-prefix","change prefix"], usage="setprefix [prefix]")
     @commands.has_permissions(manage_channels=True)
-    async def set_prefix(self, ctx: commands.context, prefix: str):
+    async def set_prefix(self, ctx: commands.context, prefix: str = ""):
         """Change the prefix for the channel
 
         Arguments:
@@ -95,14 +84,14 @@ class AdminCommands:
             prefix {str} -- The prefix to set the guild to use.
         """
 
-        if prefix == "":
-            if ctx.prefix == "":
-                await ctx.send("This channel already has no prefix.")
-            else:
-                await confirm_action(
-                    ctx,
-                    "Are you sure you want to set the prefix to none in this channel?",
-                )
+        if prefix == "" or prefix is None:
+            confirm = await confirm_action(ctx, f"Do you want to remove the need for a prefix?")
+            if confirm == False:
+                return
+            prefix = ""
+
+        if prefix == ctx.prefix:
+            await ctx.send(f"Prefix is already set to `{ctx.prefix}`!")
             return
 
         await self.database.set_prefix(ctx, prefix)

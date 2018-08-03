@@ -14,31 +14,7 @@ from .get_user_converter import GetUserConverter
 
 class HelperCommands:
     # Helper Commands is currently exposed for testing purposes.
-
-    @commands.command(aliases=["getmember", "get-member"], usage="getmember [user]")
-    async def get_member(self, ctx: commands.context, user: GetUserConverter):
-        """Mainly to test GetUserConverter
-
-        Arguments:
-            ctx {commands.context} -- Information about where the command was run.
-
-        Keyword Arguments:
-            user {GetUserConverter} -- Gets the user
-        """
-
-        await ctx.send(user.mention)
-
-    @commands.command(aliases=["getemoji", "get-emoji"], usage="getemoji [emoji]")
-    async def get_emoji(self, ctx: commands.context, *emoji: str):
-        """Get an emoji and display it.
-
-        Arguments:
-            ctx {commands.context} -- Information about where the command was run.
-            *emoji {str} -- Get the message
-        """
-
-        await ctx.send(ctx.bot.emojis)
-        await ctx.send(discord.utils.get(ctx.bot.get_all_emojis(), name=emoji))
+    pass
 
 
 async def confirm_action(ctx: commands.context, message="Are you sure?"):

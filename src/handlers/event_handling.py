@@ -18,13 +18,13 @@ class BotEventHandler:
 
     async def on_ready(self):
         logged_in_message = textwrap.dedent(
-            """\
+            f"""\
             Logged in as
-            {0.name}
-            {0.id}
+            {self.bot.user.name}
+            {self.bot.user.id}
             ------
             """
-        ).format(self.bot.user)
+        )
 
         logging.info(logged_in_message)
         print(logged_in_message)
