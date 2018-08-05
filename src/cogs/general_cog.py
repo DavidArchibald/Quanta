@@ -72,7 +72,9 @@ class GeneralCommands:
                     if not isinstance(member, commands.Command):
                         continue
                     command = member
-                    command_usage = member.usage
+                    command_usage = (
+                        command.usage if command.usage is not None else command.name
+                    )
                     if command.hidden == True:
                         continue
                     description += f"**{command_usage}**\n"

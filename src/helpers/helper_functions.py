@@ -8,22 +8,33 @@ from discord.ext import commands
 
 import operator
 import re
+from .bot_states import BotStates
+
+states = BotStates()
 
 from .get_user_converter import GetUserConverter
 
 
 class HelperCommands:
     # Helper Commands is currently exposed for testing purposes.
-    pass
+    @commands.command(usage="error [error]")
+    async def error(self, ctx: commands.Context):
+        try:
+            1 / 0
+        except ZeroDivisionError as exception:
+            await states.error(ctx, exception)
 
 
 async def confirm_action(ctx: commands.context, message="Are you sure?"):
+    yes = ctx.bot.get_emoji(475029940639891467)  # "<:quantacheck:475029940639891467>"
+    no = ctx.bot.get_emoji(475032169086058496)  # "<:quantax:475032169086058496>"
+
     confirm = await ctx.send(message)
-    await confirm.add_reaction("✅")
-    await confirm.add_reaction("❌")
+    await confirm.add_reaction(yes)
+    await confirm.add_reaction(no)
 
     def check(reaction, user):
-        return user == ctx.message.author and str(reaction.emoji) in ["✅", "❌"]
+        return user == ctx.message.author and reaction in [yes, no]
 
     while True:
         try:
@@ -41,7 +52,7 @@ async def confirm_action(ctx: commands.context, message="Are you sure?"):
 
     await confirm.delete()
 
-    if str(reaction.emoji) == "✅":
+    if reaction == yes:
         return True
 
     return False

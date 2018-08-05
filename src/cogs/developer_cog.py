@@ -9,7 +9,13 @@ import os
 import sys
 import time
 
+import asyncio
+import subprocess
+
+from ..helpers import bot_states
 from ..helpers.helper_functions import confirm_action
+
+states = bot_states.BotStates()
 
 
 class DeveloperCommands:
@@ -85,7 +91,7 @@ class DeveloperCommands:
         hidden=True, aliases=["force", "dev"], usage="sudo (quiet) [command] [*args]"
     )
     @commands.has_role("Quanta's Owner")
-    async def sudo(self, ctx: commands.Context, quiet: bool = True, *args):
+    async def sudo(self, ctx: commands.Context, *args):
         """Force a command to be run without perms from the user.
 
         Arguments:
@@ -93,8 +99,6 @@ class DeveloperCommands:
             quiet {bool} -- Whether to run silently or not.
 
         """
-        if quiet == True:
-            await ctx.message.delete()
 
     @commands.command(hidden=True, aliases=["run"], usage="eval [code]")
     async def eval(self, ctx: commands.Context, quiet: bool = False):
@@ -102,10 +106,30 @@ class DeveloperCommands:
 
         Arguments:
             ctx {commands.Context} -- Information about where the command was run.
-            quiet {bool} -- [description] (default: {False})
         """
 
         pass
 
     async def __local_check(self, ctx):
         return await ctx.bot.is_owner(ctx.author)
+
+    @commands.command(hidden=True)
+    async def update(self, ctx: commands.Context):
+        """Loads changes and then reruns the bot.
+
+        Arguments:
+            ctx {commands.Context} -- Information about where the command was run.
+        """
+        try:
+            git_update = await asyncio.create_subprocess_exec(
+                "git help", loop=ctx.bot.loop
+            )
+        except NotImplementedError:
+            await states.error(
+                ctx,
+                "The OS this script is running on does not support running commands on their command line through Python.",
+            )
+            return
+        stdout, stderr = await git_update.communicate()
+        result = stdout.decode().strip()
+        print(result)

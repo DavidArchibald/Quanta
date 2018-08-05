@@ -8,6 +8,7 @@ from discord.ext import commands
 
 from ..helpers import helper_functions
 from ..helpers.helper_functions import GetUserConverter, confirm_action
+import re
 
 
 class AdminCommands:
@@ -74,9 +75,19 @@ class AdminCommands:
         await ctx.kick(user)
         await ctx.send(f"kicked {user}")
 
-    @commands.command(aliases=["setprefix", "set-prefix", "changeprefix", "change_prefix", "change-prefix","change prefix"], usage="setprefix [prefix]")
+    @commands.command(
+        aliases=[
+            "setprefix",
+            "set-prefix",
+            "changeprefix",
+            "change_prefix",
+            "change-prefix",
+            "change prefix",
+        ],
+        usage="setprefix [prefix]",
+    )
     @commands.has_permissions(manage_channels=True)
-    async def set_prefix(self, ctx: commands.context, prefix: str = ""):
+    async def set_prefix(self, ctx: commands.context, *, prefix: str = None):
         """Change the prefix for the channel
 
         Arguments:
@@ -84,14 +95,46 @@ class AdminCommands:
             prefix {str} -- The prefix to set the guild to use.
         """
 
-        if prefix == "" or prefix is None:
-            confirm = await confirm_action(ctx, f"Do you want to remove the need for a prefix?")
-            if confirm == False:
+        if prefix is None:
+            confirm = await confirm_action(
+                ctx, "Are you sure you want to remove the need for a prefix?"
+            )
+            if not confirm:
                 return
             prefix = ""
 
-        if prefix == ctx.prefix:
-            await ctx.send(f"Prefix is already set to `{ctx.prefix}`!")
+        if not isinstance(prefix, str):
             return
 
-        await self.database.set_prefix(ctx, prefix)
+        boundary_quotes = re.compile(r"^([\"'])(((?!\1).)*)(\1)$")
+        match = boundary_quotes.match(prefix)
+        while match:  # Removes wrapped quotes ie 'lorem', "ipsum" "'dolor'" '"sit"'
+            prefix = prefix[1:-1]
+            match = boundary_quotes.match(prefix)
+
+        if prefix.casefold().contains(("'", '"')):
+            confirm = await confirm_action(
+                ctx,
+                f"Quotes can mess with how the bot parses arguments, so please don't use quotes in your prefix.",
+            )
+            return
+
+        if prefix.casefold().contains(("*", "\\", "__", "~~", "`")):
+            confirm = await confirm_action(
+                ctx,
+                f"Markdown can be annoying! Are you sure you want to set the prefix to {prefix}? It may format commands in unexpected ways.",
+            )
+            if not confirm:
+                return
+
+        if prefix == ctx.prefix:
+            await ctx.send(f"Prefix is already set to `{prefix}`!")
+            return
+
+        try:
+            await self.database.set_prefix(ctx, prefix)
+        except Exception:
+            await ctx.send(f"An unexpected Exception occurred.")
+            return
+
+        await ctx.send(f"The prefix has been set to `{prefix}` successfully!")
