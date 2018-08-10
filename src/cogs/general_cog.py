@@ -97,3 +97,7 @@ class GeneralCommands:
             print(dir(ctx))
 
         await ctx.send(embed=embed)
+
+
+def setup(bot, database):
+    bot.add_cog(GeneralCommands(database))

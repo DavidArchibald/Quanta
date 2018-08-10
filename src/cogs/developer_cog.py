@@ -48,11 +48,11 @@ class DeveloperCommands:
             ctx {commands.Context} -- Information about where the command was run.
         """
 
-        confirm = await confirm_action(ctx)
+        confirm, message = await confirm_action(ctx)
         if not confirm:
             return
 
-        await ctx.send("Goodbye...")
+        await message.edit(content="Goodbye...")
         await ctx.bot.logout()
 
     @commands.command(
@@ -110,9 +110,6 @@ class DeveloperCommands:
 
         pass
 
-    async def __local_check(self, ctx):
-        return await ctx.bot.is_owner(ctx.author)
-
     @commands.command(hidden=True)
     async def update(self, ctx: commands.Context):
         """Loads changes and then reruns the bot.
@@ -121,8 +118,11 @@ class DeveloperCommands:
             ctx {commands.Context} -- Information about where the command was run.
         """
         try:
-            git_update = await asyncio.create_subprocess_exec(
-                "git help", loop=ctx.bot.loop
+            git_update = await asyncio.create_subprocess_shell(
+                "git pull origin master",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                loop=ctx.bot.loop,
             )
         except NotImplementedError:
             await states.error(
@@ -131,5 +131,18 @@ class DeveloperCommands:
             )
             return
         stdout, stderr = await git_update.communicate()
-        result = stdout.decode().strip()
-        print(result)
+        error = stderr.decode().strip()
+        output = stdout.decode().strip()
+        result = f"```css\n{error}\n{output}```"
+        if len(result) > 1000:
+            result_truncated = "\n**---Output Truncated---**"
+            result_truncated_length = 23
+            result = result[1000 - result_truncated_length] + result_truncated
+        await ctx.send(result)
+
+    async def __local_check(self, ctx):
+        return await ctx.bot.is_owner(ctx.author)
+
+
+def setup(bot, database):
+    bot.add_cog(DeveloperCommands(database))

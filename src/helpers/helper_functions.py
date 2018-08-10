@@ -8,6 +8,8 @@ from discord.ext import commands
 
 import operator
 import re
+
+
 from .bot_states import BotStates
 
 states = BotStates()
@@ -24,44 +26,52 @@ class HelperCommands:
         except ZeroDivisionError as exception:
             await states.error(ctx, exception)
 
+    @commands.command(usage="wait [time]")
+    async def wait(self, ctx: commands.Context, time: int = 1):
+        print("waiting")
+        await asyncio.sleep(time)
+        print("done waiting")
 
-async def confirm_action(ctx: commands.context, message="Are you sure?"):
+
+async def confirm_action(
+    ctx: commands.context, message="Are you sure?", base_message=None
+):
     yes = ctx.bot.get_emoji(475029940639891467)  # "<:quantacheck:475029940639891467>"
     no = ctx.bot.get_emoji(475032169086058496)  # "<:quantax:475032169086058496>"
 
-    confirm = await ctx.send(message)
+    if base_message is not None:
+        confirm = base_message.edit(message)
+        confirm.clear_reactions()
+    else:
+        confirm = await ctx.send(message)
+
     await confirm.add_reaction(yes)
     await confirm.add_reaction(no)
 
-    def check(reaction, user):
-        return user == ctx.message.author and reaction in [yes, no]
-
     while True:
         try:
-            reaction, user = await ctx.bot.wait_for(
-                "reaction_add", timeout=15.0, check=check
-            )
+            reaction, user = await ctx.bot.wait_for("reaction_add", timeout=15.0)
         except asyncio.TimeoutError:
-            await confirm.delete()
-            return False
+            break
+
+        if user == ctx.bot.user:
+            continue
+
+        if user == ctx.message.author and reaction.emoji in (yes, no):
+            break
 
         try:
             await confirm.remove_reaction(reaction, user)
         except discord.HTTPException:
             pass
 
-    await confirm.delete()
+    await confirm.clear_reactions()
 
-    if reaction == yes:
-        return True
+    if reaction.emoji == yes:
+        return (True, confirm)
 
-    return False
+    return (False, confirm)
 
 
-def smallest(a: str, b: str):
-    ab, ba = a + b, b + a
-    if ab == ba:
-        return 0
-    if ab < ba:
-        return -1
-    return 1
+def setup(bot, database):
+    bot.add_cog(HelperCommands())

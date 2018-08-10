@@ -22,7 +22,7 @@ class BotStates:
             except BaseException:
                 error = traceback.format_exc()
 
-            if error.length >= 100:
+            if len(error) >= 100:
                 error_truncated_message = "\n**---Error Truncated---**"
                 # Discord should interpret this as being 22 characters.
                 # and len doesn't really work because of markdown parsing

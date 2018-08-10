@@ -13,6 +13,8 @@ import time
 import json
 import yaml
 
+import logging
+
 import functools
 import inspect
 
@@ -29,15 +31,15 @@ def with_connection():
     def wrapper(method):
         @functools.wraps(method)
         async def get_connection(self, *args, **kwargs):
+            if hasattr(kwargs, "connection"):
+                return await method(self, *args, **kwargs)
+
             if self._pool is None:
                 raise RuntimeError(
                     "The function {method.__name__} wasn't run because the database isn't connected to."
                 )
-
             async with self._pool.acquire() as connection:
-                # In case something wants to overide it(testing?)
-                if not hasattr(kwargs, "connection"):
-                    kwargs["connection"] = connection
+                kwargs["connection"] = connection
 
                 return await method(self, *args, **kwargs)
 
@@ -51,7 +53,7 @@ class Database:
         # Go up a directory to the source
         source = os.path.dirname(os.path.dirname(__file__))
         database_info_path = db_info_path or os.path.join(
-            source, "secrets\\config.yaml"
+            source, "secrets/config.yaml"
         )  # Ends up with ./src/secrets/config.yaml
         with open(database_info_path, "r") as database_info_file:
             config = yaml.safe_load(database_info_file)
@@ -64,6 +66,8 @@ class Database:
     async def connect(self):
         """Creates a connection pool."""
         self._pool = await asyncpg.create_pool(**self._database_info)
+        if self._pool is None:
+            logging.warn('The database refused to connect! Falling back to "?" prefix')
 
     async def get_prefix(self, ctx: commands.context):
         """Gets the channel's prefix for running with
@@ -74,9 +78,10 @@ class Database:
         Returns:
             String -- The channel's prefix
         """
-        channel = (
-            ctx if isinstance(ctx, discord.abc.GuildChannel) else ctx.message.channel
-        )  # Because some code is forced to pass in a channel
+        # The function may still be run even if there is no connection because it doesn't have the `with_connection` decorator
+        if self._pool is None:
+            return "?"
+        channel = ctx.message.channel
         guild_id = str(channel.guild.id)
 
         prefix = self.cache.get(guild_id)
@@ -113,6 +118,11 @@ class Database:
             ctx {discord.Context} -- Information about where the command was run.
             prefix {String} -- The prefix for the guild.
         """
+        if prefix is None:
+            prefix = ""
+
+        if prefix is not str:
+            prefix = str(prefix)
 
         guild_id = str(ctx.message.guild.id)
 
@@ -127,3 +137,4 @@ class Database:
     async def close(self):
         """Closes the connection to the database."""
         await self._pool.close()
+        self._pool = None

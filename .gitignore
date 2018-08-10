@@ -3,6 +3,7 @@ src/secrets/*
 !src/secrets/README.md
 .vscode
 venv
+bot.log*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

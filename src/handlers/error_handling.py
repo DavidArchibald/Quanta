@@ -22,7 +22,7 @@ class CommandErrorHandler:
             error {Exception} -- The error the bot comes across.
         """
 
-        if hasattr(ctx.command, "on_error"):  #
+        if hasattr(ctx.command, "on_error"):
             return
 
         error = getattr(error, "original", error)
@@ -42,9 +42,7 @@ class CommandErrorHandler:
             return
         elif isinstance(error, commands.NoPrivateMessage):
             try:
-                await ctx.send(
-                    f'"{command}" cannot be used in Private Messages.'
-                )
+                await ctx.send(f'"{command}" cannot be used in Private Messages.')
                 return
             except discord.Forbidden:
                 pass
@@ -53,3 +51,7 @@ class CommandErrorHandler:
         traceback.print_exception(
             type(error), error, error.__traceback__, file=sys.stderr
         )
+
+
+def setup(bot, database):
+    bot.add_cog(CommandErrorHandler(database))
