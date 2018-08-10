@@ -14,6 +14,7 @@ import subprocess
 
 from ..helpers import bot_states
 from ..helpers.helper_functions import confirm_action
+from ..handlers import exit_handling
 
 states = bot_states.BotStates()
 
@@ -27,7 +28,6 @@ class DeveloperCommands:
         self.database = database
 
     @commands.command(hidden=True, aliases=["speak"], usage="say [message]")
-    @commands.has_role("Quanta's Owner")
     async def say(self, ctx: commands.Context, *, text: str):
         """Says what you say!
 
@@ -39,8 +39,9 @@ class DeveloperCommands:
         await ctx.message.delete()
         await ctx.send(text)
 
-    @commands.command(hidden=True, aliases=["stop", "shutdown", "end"], usage="kill")
-    @commands.has_role("Quanta's Owner")
+    @commands.command(
+        hidden=True, aliases=["stop", "shutdown", "end", "terminate"], usage="kill"
+    )
     async def kill(self, ctx: commands.Context):
         """Bye bye Quanta...
 
@@ -52,13 +53,12 @@ class DeveloperCommands:
         if not confirm:
             return
 
-        await message.edit(content="Goodbye...")
-        await ctx.bot.logout()
+        await message.edit(content="Goodbye!")
+        exit_handling.terminate()
 
     @commands.command(
         hidden=True, aliases=["guildinfo", "guild-info"], usage="guildinfo"
     )
-    @commands.has_role("Quanta's Owner")
     async def guild_info(self, ctx: commands.Context):
         """Retrieve info about this guild.
 
@@ -90,7 +90,6 @@ class DeveloperCommands:
     @commands.command(
         hidden=True, aliases=["force", "dev"], usage="sudo (quiet) [command] [*args]"
     )
-    @commands.has_role("Quanta's Owner")
     async def sudo(self, ctx: commands.Context, *args):
         """Force a command to be run without perms from the user.
 
