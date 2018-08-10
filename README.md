@@ -20,6 +20,6 @@ However if you want to contribute to the development, or run your own version(wh
             prefix varchar(32)
         );
         ```
-3. All of these things require credentials, along with the actual bot account, so follow the instructions in `README.md` from secrets folder to setup the needed secret credentials.
+4. All of these things require credentials, along with the actual bot account, so follow the instructions in `README.md` from secrets folder to setup the needed secret credentials.
 
 5. Lastly running `python -m src.main` in the directory Quanta should explode with random errors if you've done something wrong(That's a future thing probably), or I've done this README wrong.
