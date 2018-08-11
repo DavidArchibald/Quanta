@@ -8,6 +8,7 @@ import datetime
 import os
 import sys
 import time
+import logging
 
 import asyncio
 import subprocess
@@ -40,14 +41,26 @@ class DeveloperCommands:
         await ctx.send(text)
 
     @commands.command(
-        hidden=True, aliases=["stop", "shutdown", "end", "terminate"], usage="kill"
+        hidden=True,
+        aliases=["stop", "shutdown", "end", "terminate"],
+        usage="kill (wait)",
     )
-    async def kill(self, ctx: commands.Context):
+    async def kill(self, ctx: commands.Context, wait: str = 30):
         """Bye bye Quanta...
 
         Arguments:
             ctx {commands.Context} -- Information about where the command was run.
+            force {boolean} -- Forces the command
         """
+
+        if isinstance(wait, str) and wait.casefold() in ("now", "immediately", "force"):
+            wait = 0
+
+        try:
+            wait = int(wait)
+        except:
+            ctx.send('Invalid argument "wait"')
+            return
 
         confirm, message = await confirm_action(ctx)
         if not confirm:
@@ -55,6 +68,27 @@ class DeveloperCommands:
 
         await message.edit(content="Goodbye!")
         exit_handling.terminate()
+
+        for _ in range(0, wait):
+            commands_running = exit_handling.get_commands_running() - 1
+            if commands_running == 0:
+                try:
+                    sys.exit(0)
+                except SystemExit:
+                    pass
+            await asyncio.sleep(1)
+
+        if commands_running > 0:
+            s = "s" if commands_running != 1 else ""
+            if commands_running != 0:
+                logging.warn(
+                    f"Forcing shutdown! {commands_running} command{s} left hanging."
+                )
+                await message.edit(
+                    content=f"{commands_running} command{s} aborted to allow shutdown."
+                )
+            await ctx.bot.logout()
+            sys.exit(0)
 
     @commands.command(
         hidden=True, aliases=["guildinfo", "guild-info"], usage="guildinfo"
@@ -90,7 +124,8 @@ class DeveloperCommands:
     @commands.command(
         hidden=True, aliases=["force", "dev"], usage="sudo (quiet) [command] [*args]"
     )
-    async def sudo(self, ctx: commands.Context, *args):
+    @commands.is_owner()
+    async def sudo(self, ctx: commands.Context, command=None, *, arguments=""):
         """Force a command to be run without perms from the user.
 
         Arguments:
@@ -99,6 +134,15 @@ class DeveloperCommands:
 
         """
 
+        new_message = ctx.message
+        new_message.content = f"{ctx.prefix}{command} {arguments}"
+
+        new_ctx = await ctx.bot.get_context(new_message)
+        await new_ctx.command._parse_arguments(new_ctx)  # Parses the arguments
+        await new_ctx.command.call_before_hooks(new_ctx)  # Calls command hooks
+
+        await new_ctx.command.callback(*new_ctx.args, **new_ctx.kwargs)
+
     @commands.command(hidden=True, aliases=["run"], usage="eval [code]")
     async def eval(self, ctx: commands.Context, quiet: bool = False):
         """Runs arbitrary code.
@@ -106,6 +150,7 @@ class DeveloperCommands:
         Arguments:
             ctx {commands.Context} -- Information about where the command was run.
         """
+        print(ctx, quiet)
 
         pass
 

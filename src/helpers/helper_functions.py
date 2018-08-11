@@ -32,6 +32,11 @@ class HelperCommands:
         await asyncio.sleep(time)
         print("done waiting")
 
+    @commands.command(usage="unusable")
+    @commands.check(lambda _: False)
+    async def unusable(self, ctx: commands.Context):
+        await ctx.send("This is supposed to be unusable... How're you using this?")
+
 
 async def confirm_action(
     ctx: commands.context, message="Are you sure?", base_message=None
@@ -50,7 +55,11 @@ async def confirm_action(
 
     while True:
         try:
-            reaction, user = await ctx.bot.wait_for("reaction_add", timeout=15.0)
+            reaction, user = await ctx.bot.wait_for(
+                "reaction_add",
+                timeout=15.0,
+                check=lambda reaction, _: reaction.message.id == confirm.id,
+            )
         except asyncio.TimeoutError:
             break
 

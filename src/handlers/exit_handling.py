@@ -10,8 +10,8 @@ from discord.ext import commands
 class ExitHandler:
     def __init__(self):
         self.commands_running = 0
-        self.SIGTERM = False
         self.lock = Lock()
+        self.SIGTERM = False
 
         signal.signal(signal.SIGTERM, self.signal_terminate_handler)
         signal.signal(signal.SIGINT, self.signal_interupt_handler)
@@ -34,14 +34,16 @@ class ExitHandler:
         self.lock.release()
 
     async def on_command_error(self, ctx: commands.Context, error: Exception):
-        self.on_command_completion(ctx)
+        await self.on_command_completion(ctx)
 
-    def signal_terminate_handler(self):
+    def signal_terminate_handler(self, signal, frame):
+        print("signal_terminate_handler")
         if self.SIGTERM == True:
             sys.exit(0)
         self.SIGTERM = True
 
-    def signal_interupt_handler(self):
+    def signal_interupt_handler(self, signal, frame):
+        print("signal_interupt_handler")
         if self.SIGTERM == True:
             sys.exit(0)
         self.SIGTERM = True
@@ -57,6 +59,11 @@ def is_terminating():
 
 def terminate():
     exit_handler.SIGTERM = True
+    if exit_handler.commands_running == 0:
+        sys.exit(0)
+
+
+def get_commands_running():
     return exit_handler.commands_running
 
 

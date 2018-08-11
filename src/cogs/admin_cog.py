@@ -18,6 +18,7 @@ class AdminCommands:
 
     def __init__(self, database):
         self.database = database
+        self.clearing_channels = []
 
     @commands.command(usage="purge (count) (user)")
     @commands.has_permissions(manage_messages=True)
@@ -43,6 +44,12 @@ class AdminCommands:
         await ctx.channel.purge(limit=limit, check=check_user)
 
     @commands.command(aliases=["clearall", "clear-all", "clear all"], usage="clearall")
+    @commands.cooldown(
+        1, 86400, commands.BucketType.user
+    )  # So one person can't abuse the feature.
+    @commands.cooldown(
+        1, 86400, commands.BucketType.channel
+    )  # Only allows this to be used once a day in a channel.
     @commands.has_permissions(manage_messages=True)
     async def clear_all(self, ctx: commands.Context):
         """Remove all messsages.
@@ -50,14 +57,40 @@ class AdminCommands:
         Arguments:
             ctx {commands.Context} -- Information about where the command was run.
         """
+        deleted_message = 0
 
-        confirm, _ = await confirm_action(ctx)
+        confirm, confirm_message = await confirm_action(
+            ctx, message="Are you sure you want to delete all these messages?"
+        )
 
         if not confirm:
+            await confirm_message.edit(content="Clearing messages cancelled")
             return
 
+        prefix = await self.database.get_prefix(ctx)
+        await confirm_message.edit(
+            content=f"Deleting messages... Stop with {prefix}stopclearing"
+        )
+        self.clearing_channels.append(ctx.channel.id)
+
         async for message in ctx.channel.history(limit=None):
-            await message.delete()
+            if ctx.channel.id not in self.clearing_channels:
+                break
+            if message.id != confirm_message.id:
+                await message.delete()
+                deleted_message += 1
+
+        await confirm_message.delete()
+        await ctx.send(content=f"Deleted {deleted_message} messages")
+
+    @commands.command(usage="stopclearing", aliases=["stopclearing", "stop-clearing"])
+    @commands.cooldown(
+        1, 86400, commands.BucketType.channel
+    )  # Only allow this to be used once a day in a channel.
+    @commands.has_permissions(manage_messages=True)
+    async def stop_clearing(self, ctx: commands.Context):
+        if ctx.channel.id in self.clearing_channels:
+            self.clearing_channels.remove(ctx.channel.id)
 
     @commands.command(usage="kick [user] (reason)")
     @commands.has_permissions(kick_members=True)
@@ -82,7 +115,6 @@ class AdminCommands:
             "changeprefix",
             "change_prefix",
             "change-prefix",
-            "change prefix",
         ],
         usage="setprefix [prefix]",
     )
