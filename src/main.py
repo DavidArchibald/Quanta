@@ -3,24 +3,26 @@
 
 """A Discord.py bot."""
 
+import asyncio
+
 import discord
 from discord.ext import commands
 import discord.utils
 
-import traceback
-
 import os
-import asyncio
-
 import sys
-import logging
+import signal
 
-import yaml
+
+import traceback
+import logging
 
 import importlib
 
-from .helpers import database_helper, logs_helper
+import yaml
+
 from .handlers import exit_handling
+from .helpers import database_helper, logs_helper
 
 cogs = {
     "admin": "src.cogs.admin_cog",
@@ -87,5 +89,8 @@ if __name__ == "__main__":
 
     bot_info = config["bot_info"]
     token = bot_info["token"]
+
+    signal.signal(signal.SIGTERM, exit_handling.signal_terminate_handler)
+    signal.signal(signal.SIGINT, exit_handling.signal_interupt_handler)
 
     bot.run(token)

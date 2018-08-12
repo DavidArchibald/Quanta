@@ -67,6 +67,4 @@ def get_commands_running():
 
 
 def setup(bot, database):
-    signal.signal(signal.SIGTERM, signal_terminate_handler)
-    signal.signal(signal.SIGINT, signal_interupt_handler)
     bot.add_cog(exit_handler)
