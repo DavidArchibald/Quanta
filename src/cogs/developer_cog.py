@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: UTF-8 -*-
 
 import discord
 from discord.ext import commands
@@ -16,6 +15,10 @@ import subprocess
 from ..helpers import bot_states
 from ..helpers.helper_functions import confirm_action
 from ..handlers import exit_handling
+
+from ..constants import emojis
+
+exit_handler = exit_handling.get_exit_handler()
 
 states = bot_states.BotStates()
 
@@ -50,7 +53,7 @@ class DeveloperCommands:
 
         Arguments:
             ctx {commands.Context} -- Information about where the command was run.
-            force {boolean} -- Forces the command
+            wait {str} -- How long to wait until killing.
         """
 
         if isinstance(wait, str) and wait.casefold() in ("now", "immediately", "force"):
@@ -59,23 +62,29 @@ class DeveloperCommands:
         try:
             wait = int(wait)
         except:
-            ctx.send('Invalid argument "wait"')
+            ctx.send(f'Invalid argument "{wait}" for wait.')
             return
 
         confirm, message = await confirm_action(ctx)
         if not confirm:
+            await message.edit(content="")
             return
 
-        await message.edit(content="Goodbye!")
-        exit_handling.terminate()
+        await message.edit(content="Shutting down...")
+
+        await message.add_reaction(emojis.loading)
+
+        exit_handler.terminate()  # This won't close it because this command will still be running.
 
         for _ in range(0, wait):
-            commands_running = exit_handling.get_commands_running() - 1
+            commands_running = exit_handler.get_commands_running() - 1
             if commands_running == 0:
                 try:
-                    sys.exit(0)
-                except SystemExit:
-                    pass
+                    await message.clear_reactions()
+                except discord.HTTPException:
+                    await message.remove_reaction(emojis.loading, ctx.bot.user)
+                await message.edit(content="Goodbye!")
+                sys.exit(0)
             await asyncio.sleep(1)
 
         if commands_running > 0:
@@ -84,6 +93,10 @@ class DeveloperCommands:
                 logging.warn(
                     f"Forcing shutdown! {commands_running} command{s} left hanging."
                 )
+                try:
+                    await message.clear_reactions()
+                except discord.HTTPException:
+                    await message.remove_reaction(emojis.loading, ctx.bot.user)
                 await message.edit(
                     content=f"{commands_running} command{s} aborted to allow shutdown."
                 )

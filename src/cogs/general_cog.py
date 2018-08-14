@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
-# -*- coding: UTF-8 -*-
 
 import discord
 from discord.ext import commands
 
-from ..helpers import simple_paginator
-from ..helpers.simple_paginator import SimplePaginator
+import datetime
+import humanize
 
 import inspect
+
 import re
 import textwrap
+
+from ..helpers import simple_paginator
+from ..helpers.simple_paginator import SimplePaginator
 
 
 class GeneralCommands:
@@ -97,6 +100,13 @@ class GeneralCommands:
             print(dir(ctx))
 
         await ctx.send(embed=embed)
+
+    @commands.command(usage="uptime")
+    async def uptime(self, ctx: commands.Context):
+        current_time = datetime.datetime.now()
+        running_time = humanize.naturaldelta(current_time - ctx.bot.launch_time)
+
+        await ctx.send(f"The bot has been up for {running_time}")
 
 
 def setup(bot, database):

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: UTF-8 -*-
 
 import discord
 from discord.ext import commands
@@ -8,12 +7,15 @@ import logging
 import textwrap
 import traceback
 
+from ..constants import emojis
+
 
 class BotEventHandler:
     def __init__(self, bot):
         self.bot = bot
 
     async def on_ready(self):
+        emojis.get_emojis(self.bot)
         logged_in_message = textwrap.dedent(
             f"""\
             Logged in as

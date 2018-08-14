@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: UTF-8 -*-
 
 """A Discord.py bot."""
 
@@ -13,16 +12,17 @@ import os
 import sys
 import signal
 
+import datetime
 
 import traceback
 import logging
-
 import importlib
-
 import yaml
 
-from .handlers import exit_handling
 from .helpers import database_helper, logs_helper
+from .handlers import exit_handling
+
+exit_handler = None
 
 cogs = {
     "admin": "src.cogs.admin_cog",
@@ -31,7 +31,6 @@ cogs = {
     "helper": "src.helpers.helper_functions",
     "error_handling": "src.handlers.error_handling",
     "event_handling": "src.handlers.event_handling",
-    "exit_handling": "src.handlers.exit_handling",
 }
 
 
@@ -53,21 +52,22 @@ bot = commands.Bot(case_insensitive=True, command_prefix=get_prefix_wrapper)
 
 @bot.event
 async def on_message(message):
-    if not exit_handling.is_terminating():
+    if exit_handler is not None and not exit_handler.is_terminating():
         await bot.process_commands(message)
 
 
 if __name__ == "__main__":
+    exit_handler = exit_handling.init(bot)
+
     # Because asynchronous things can't be run until the bot loop is set up.
     loop = asyncio.get_event_loop()
     loop.run_until_complete(database.connect())
 
     logs_helper.start_logging()
 
-    config_path = os.path.join(os.path.dirname(__file__), "secrets/config.yaml")
-
     # The help command has to be removed before the cogs are loaded.
     bot.remove_command("help")
+    bot.launch_time = datetime.datetime.now()
 
     # This basically clones `bot.import_extension` in order to pass in the database object instead.
     for path in cogs.values():
@@ -78,19 +78,17 @@ if __name__ == "__main__":
                     "Extension does not have a setup function."
                 )
             cog = lib.setup(bot, database)
-        except Exception:
+        except Exception as exception:
             print(f"Could not add {path} due to following exception.")
-            raise Exception
+            print(exception)
 
         logging.info(f"Added {path} successfully.")
 
+    config_path = os.path.join(os.path.dirname(__file__), "secrets/config.yaml")
     with open(config_path, "r") as config_file:
         config = yaml.safe_load(config_file)
 
     bot_info = config["bot_info"]
     token = bot_info["token"]
-
-    signal.signal(signal.SIGTERM, exit_handling.signal_terminate_handler)
-    signal.signal(signal.SIGINT, exit_handling.signal_interupt_handler)
 
     bot.run(token)

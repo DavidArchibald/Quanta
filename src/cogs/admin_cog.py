@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: UTF-8 -*-
 
 import asyncio
 
@@ -104,9 +103,12 @@ class AdminCommands:
         Keyword Arguments:
             reason {str} -- Why the user is being kicked (default: {""})
         """
-
-        await ctx.kick(user)
-        await ctx.send(f"kicked {user}")
+        try:
+            await ctx.kick(user)
+        except:
+            await ctx.send("Could not kick user!")
+            return
+        await ctx.send(f"Kicked {user}")
 
     @commands.command(
         aliases=[
@@ -128,6 +130,7 @@ class AdminCommands:
         """
 
         message = None
+        no_change_message = "Prefix has not been changed."
 
         current_prefix = await self.database.get_prefix(ctx)
         if prefix == current_prefix:
@@ -140,6 +143,7 @@ class AdminCommands:
                 "You may have forgotten the prefix. Do you want to remove the need for a prefix?",
             )
             if not confirm:
+                await message.edit(content=no_change_message)
                 return
             prefix = ""
 
@@ -148,7 +152,7 @@ class AdminCommands:
 
         prefix_casefold = prefix.casefold()
 
-        boundary_quotes = re.compile(r"^([\"'])(((?!\1).)*)(\1)$")
+        boundary_quotes = re.compile(r"^([\"'])((((?!\1).)|\\\1)*)(\1)$")
         match = boundary_quotes.match(prefix)
         while match:  # Removes wrapped quotes ie 'lorem', "ipsum" "'dolor'" '"sit"'
             prefix = prefix[1:-1]
@@ -164,6 +168,7 @@ class AdminCommands:
                 f'Your prefix is pretty long. Are you sure you want to set it to "{prefix}"?',
             )
             if not confirm:
+                await message.edit(content=no_change_message)
                 return
 
         if "'" in prefix_casefold or '"' in prefix_casefold:
@@ -179,6 +184,7 @@ class AdminCommands:
                 f'Markdown can be annoying! Are you sure you want to set the prefix to "{prefix}"? It may format stuff in unexpected ways.',
             )
             if not confirm:
+                await message.edit(content=no_change_message)
                 return
 
         try:

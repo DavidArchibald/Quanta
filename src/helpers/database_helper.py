@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: UTF-8 -*-
 
 import discord
 from discord.ext import commands
@@ -49,12 +48,11 @@ def with_connection():
 
 
 class Database:
-    def __init__(self, db_info_path=None):
-        # Go up a directory to the source
+    def __init__(self, db_info_path=None, loop=None):
         source = os.path.dirname(os.path.dirname(__file__))
-        database_info_path = db_info_path or os.path.join(
-            source, "secrets/config.yaml"
-        )  # Ends up with ./src/secrets/config.yaml
+        database_info_path = db_info_path or os.path.join(source, "secrets/config.yaml")
+
+        # Opens ./src/secrets/config.yaml or the
         with open(database_info_path, "r") as database_info_file:
             config = yaml.safe_load(database_info_file)
             database_info = config["database_info"]
@@ -62,12 +60,17 @@ class Database:
         self._database_info = database_info
         self._pool = None
         self.cache = LFUCache(128)
+        self.loop = loop
 
     async def connect(self):
         """Creates a connection pool."""
-        self._pool = await asyncpg.create_pool(**self._database_info)
-        if self._pool is None:
-            logging.warn('The database refused to connect! Falling back to "?" prefix')
+        try:
+            if self.loop and not hasattr(self._database_info, "loop"):
+                self._database_info.set(loop=self.loop)
+            self._pool = await asyncpg.create_pool(**self._database_info)
+        except Exception as exception:
+            logging.warn('The database refused to connect! Falling back to "?" prefix.')
+            print(exception)
 
     async def get_prefix(self, ctx: commands.context):
         """Gets the channel's prefix for running with
@@ -76,7 +79,7 @@ class Database:
             ctx {commands.context} -- Information about where the command was run.
 
         Returns:
-            String -- The channel's prefix
+            str -- The channel's prefix
         """
         # The function may still be run even if there is no connection because it doesn't have the `with_connection` decorator
         if self._pool is None:
@@ -116,12 +119,12 @@ class Database:
 
         Arguments:
             ctx {discord.Context} -- Information about where the command was run.
-            prefix {String} -- The prefix for the guild.
+            prefix {str} -- The prefix for the guild.
         """
         if prefix is None:
             prefix = ""
 
-        if prefix is not str:
+        if not isinstance(prefix, str):
             prefix = str(prefix)
 
         guild_id = str(ctx.message.guild.id)
@@ -134,7 +137,21 @@ class Database:
             )
             self.cache.set(guild_id, prefix)
 
-    async def close(self):
+    def is_connected(self):
+        """Returns if the database is connected or not.
+
+        Returns:
+            bool -- If the database is connected.
+        """
+
+        return self._pool is not None
+
+    async def close(self, timeout: int = 10):
         """Closes the connection to the database."""
-        await self._pool.close()
+        if timeout not in (0, -1, None):
+            await asyncio.wait_for(self._pool.close(), timeout)
+
+        await self._pool.terminate()
+
         self._pool = None
+        logging.warn('Closed the database! Falling back to "?" prefix mode.')
