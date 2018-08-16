@@ -61,7 +61,7 @@ class DeveloperCommands:
 
         try:
             wait = int(wait)
-        except:
+        except ValueError:
             ctx.send(f'Invalid argument "{wait}" for wait.')
             return
 

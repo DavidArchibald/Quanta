@@ -7,10 +7,9 @@ from discord.ext import commands
 
 import operator
 import re
+import importlib
 
 from ..constants import emojis
-
-from .get_user_converter import GetUserConverter
 from .bot_states import BotStates
 
 states = BotStates()
@@ -79,48 +78,69 @@ async def confirm_action(
 
     if base_message is not None:
         confirm = base_message.edit(content=message)
-        try:
-            await confirm.clear_reactions()
-        except discord.HTTPException:
-            pass
     else:
         confirm = await ctx.send(message)
 
-    await confirm.add_reaction(emojis.yes)
-    await confirm.add_reaction(emojis.no)
+    reaction = await wait_for_reactions(ctx, confirm, (emojis.yes, emojis.no))
+
+    if reaction.emoji == emojis.yes:
+        return (True, confirm)
+
+    return (False, confirm)
+
+
+async def wait_for_reactions(
+    ctx: commands.Context,
+    message: discord.message,
+    reactions: iter,
+    timeout: int = 60.0,
+    remove_reactions=True,
+):
+    for reaction in list(reactions):
+        try:
+            await message.add_reaction(reaction)
+        except (discord.NotFound, discord.InvalidArgument):
+            reactions.remove(reaction)
+        except discord.HTTPException:
+            pass
 
     while True:
         try:
             reaction, user = await ctx.bot.wait_for(
                 "reaction_add",
                 timeout=timeout,
-                check=lambda reaction, _: reaction.message.id == confirm.id,
+                check=lambda reaction, _: reaction.message.id == message.id,
             )
         except asyncio.TimeoutError:
-            await confirm.edit(content="Timeout out!")
-            break
+            await message.edit(embed=None, content="Timeout out!")
+            if remove_reactions == True:
+                try:
+                    await message.clear_reactions()
+                except discord.HTTPException:
+                    for emoji in reactions:
+                        await message.remove_reaction(emoji, ctx.bot.user)
+            return None
 
         if user == ctx.bot.user:
             continue
 
-        if user == ctx.message.author and reaction.emoji in (emojis.yes, emojis.no):
+        if user == ctx.message.author and reaction.emoji in reactions:
             break
 
+        if remove_reactions == True:
+            try:
+                await message.remove_reaction(reaction, user)
+            except (discord.HTTPException, discord.InvalidArgument):
+                pass
+
+    if remove_reactions == True:
         try:
-            await confirm.remove_reaction(reaction, user)
+            await message.clear_reactions()
         except discord.HTTPException:
-            pass
+            for reaction in reactions:
+                await message.remove_reaction(ctx.bot.user, reaction)
 
-    try:
-        await confirm.clear_reactions()
-    except discord.HTTPException:
-        await confirm.remove_reaction(emojis.yes, ctx.bot.user)
-        await confirm.remove_reaction(emojis.no, ctx.bot.user)
-
-    if reaction.emoji == emojis.yes:
-        return (True, confirm)
-
-    return (False, confirm)
+    return reaction
 
 
 def setup(bot, database):

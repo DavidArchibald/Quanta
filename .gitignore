@@ -4,6 +4,7 @@ src/secrets/*
 .vscode
 venv
 bot.log*
+kube
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

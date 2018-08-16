@@ -31,6 +31,7 @@ cogs = {
     "helper": "src.helpers.helper_functions",
     "error_handling": "src.handlers.error_handling",
     "event_handling": "src.handlers.event_handling",
+    "get_user": "src.helpers.fuzzy_user",
 }
 
 

@@ -8,6 +8,22 @@ cancel = None
 yes = None
 no = None
 
+number_emojis = [
+    "0\u20e3",  # zero
+    "1\u20e3",  # one
+    "2\u20e3",  # two
+    "3\u20e3",  # three
+    "4\u20e3",  # four
+    "5\u20e3",  # five
+    "6\u20e3",  # six
+    "7\u20e3",  # seven
+    "8\u20e3",  # eight
+    "9\u20e3",  # nine
+    "\U0001f51f",  # ten
+]
+
+zzz = "\U0001F4A4"
+
 
 def get_emojis(bot: commands.bot):
     global loading

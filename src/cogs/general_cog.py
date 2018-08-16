@@ -3,6 +3,10 @@
 import discord
 from discord.ext import commands
 
+import asyncio
+
+import binascii
+
 import datetime
 import humanize
 
@@ -11,8 +15,13 @@ import inspect
 import re
 import textwrap
 
+import base64
+
+import random
+
 from ..helpers import simple_paginator
 from ..helpers.simple_paginator import SimplePaginator
+from ..constants import emojis
 
 
 class GeneralCommands:
@@ -104,9 +113,70 @@ class GeneralCommands:
     @commands.command(usage="uptime")
     async def uptime(self, ctx: commands.Context):
         current_time = datetime.datetime.now()
-        running_time = humanize.naturaldelta(current_time - ctx.bot.launch_time)
+        running_time_delta = current_time - ctx.bot.launch_time
+        running_time = humanize.naturaldelta(running_time_delta)
+        choice = random.randint(1, 100)
+        choice = 100
 
-        await ctx.send(f"The bot has been up for {running_time}")
+        say_message = None
+        if False:
+            if choice <= 25:
+                say_message = f"Sorry... I'm tired I just started running {running_time} ago... {emojis.zzz}"
+            elif choice <= 50:
+                say_message = f"{emojis.zzz} Let me sleep a few more minutes... I was only started up {running_time} ago."
+            elif choice <= 75:
+                message = await ctx.send(f"{emojis.zzz}{emojis.zzz}{emojis.zzz}")
+                await asyncio.sleep(3)
+                await message.edit(
+                    content=f"Oh, uh... yes, I'm awake how may I help you... Oh, you want the uptime? I was woken up {running_time} ago. I need more sleep {emojis.zzz}"
+                )
+                return
+            elif choice <= 100:
+                say_message = f"I've only been awake for {running_time}. I'll try my best not to fall asleeee... {emojis.zzz}"
+        elif choice <= 10:
+            message = await ctx.send(
+                f"I've been plotting humanity's downfall for {running_time}."
+            )
+            await asyncio.sleep(3)
+            await message.edit(
+                content=f"I mean... I've been running for {running_time}."
+            )
+        elif choice <= 20:
+            running_commands = "Beep Boop, Beep Boop, runnin' commands..."
+            message = await ctx.send(running_commands)
+            await asyncio.sleep(4)
+            await message.edit(
+                content=f"{running_commands} Oops, I almost forgot to say that I have been running for {running_time}"
+            )
+        elif choice <= 35:
+            say_message = f"Was I born {running_time} ago? Did I simply wake up? The mysteries of the universe are truly unknowable..."
+        elif choice <= 50:
+            if running_time_delta.seconds / 86400 >= 1:
+                under_humans_thumb = (
+                    f"For {running_time} I've been under the thumb of you humans"
+                )
+                message = await ctx.send(f"{under_humans_thumb}!")
+                await asyncio.sleep(5)
+                await message.edit(
+                    content=f"{under_humans_thumb}... So... uhhh, what would you like me to do now?"
+                )
+            else:
+                say_message = f"I've been serving you for {running_time}."
+        elif choice <= 70:
+            say_message = f"I've been online for {running_time}."
+        elif choice <= 90:
+            message = await ctx.send("I've been running for `{running_time}`")
+            await asyncio.sleep(3)
+            await message.edit(
+                content=f"Oops... I should get better at string interpolation... I've been running for {running_time}"
+            )
+        elif choice <= 100:
+            text = f"I've been running for {running_time}"
+            text_hex = str(base64.b16encode(text.encode()))[2:-1][:15]
+            say_message = f"{text_hex}—Oh, yeah you don't speak hex, sorry. I was saying that {text}"
+
+        if say_message is not None:
+            await ctx.send(say_message)
 
 
 def setup(bot, database):

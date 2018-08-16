@@ -19,7 +19,7 @@ class BotStates:
         if isinstance(error, BaseException):
             # Gets the traceback truncated
             try:
-                # `raise error from None`` makes it only print the latest traceback
+                # `raise error from None` makes it only print the latest traceback
                 raise error from None  # pylint: disable-msg=E0702
             except BaseException:
                 error = traceback.format_exc()

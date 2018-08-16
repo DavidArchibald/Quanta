@@ -1,10 +1,20 @@
 #!/usr/bin/env python3
 
+import discord
+from discord.ext import commands
+
+import asyncio
 import sys
 import traceback
 
-import discord
-from discord.ext import commands
+import itertools
+
+import fuzzywuzzy
+from fuzzywuzzy import process
+
+from ..constants import emojis
+from ..helpers import helper_functions
+from ..helpers.helper_functions import wait_for_reactions
 
 
 class CommandErrorHandler:
@@ -25,16 +35,55 @@ class CommandErrorHandler:
             return
 
         error = getattr(error, "original", error)
+        command = ctx.message.content.split(" ")[0][len(ctx.prefix) :]
 
-        content = ctx.message.content
-        prefix = await self.database.get_prefix(ctx)
-        command = content.split(" ")[0][len(prefix) :]
-
-        error_message = f'"{command}" is an unknown command.'
-        logging_message = None
-        logging_traceback = f'{ctx.author}(id: {ctx.author.id}) said "{ctx.message}" in the guild {ctx.guild}(id: {ctx.guild.id}) within the channel {ctx.channel}(id: {ctx.channel.id})'
         if isinstance(error, commands.CommandNotFound):
-            pass
+            all_command_names = list(
+                itertools.chain(
+                    *[[*command.aliases, command.name] for command in ctx.bot.commands]
+                )
+            )
+            closest_command_name, closest_ratio = process.extractOne(
+                command, all_command_names
+            )
+
+            no_command = f"I don't have the command `{command}`, sorry!"
+            try_help_command = (
+                f"Try using `{ctx.prefix}help` for information about my commands."
+            )
+            if closest_ratio < 80:
+                await ctx.send(f"{no_command} {try_help_command}")
+            else:
+                message = await ctx.send(
+                    f"Did you mean to use `{ctx.prefix}{closest_command_name}`?"
+                )
+                reaction = await wait_for_reactions(
+                    ctx, message, (emojis.yes, emojis.no), timeout=10
+                )
+                if reaction is None:
+                    await message.edit(content=try_help_command)
+                    return
+                if reaction.emoji == emojis.yes:
+                    await message.edit(
+                        content=f"I'll run the command `{closest_command_name}`` for you :)"
+                    )
+                    await asyncio.sleep(1)
+                    await message.delete()
+                    new_message = ctx.message
+                    _, arguments = new_message.content.split(" ", 1)
+                    new_message.content = (
+                        f"{ctx.prefix}{closest_command_name} {arguments}"
+                    )
+
+                    await ctx.bot.process_commands(new_message)
+                    return
+
+            return
+        elif isinstance(error, discord.Forbidden):
+            print(error)
+            await ctx.send(
+                f"I don't have the permissions to do that, sorry! I need the"
+            )
             return
         elif isinstance(error, commands.DisabledCommand):
             await ctx.send(f'"{command}" has been disabled.')

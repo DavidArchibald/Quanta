@@ -5,8 +5,9 @@ import asyncio
 import discord
 from discord.ext import commands
 
-from ..helpers import helper_functions
-from ..helpers.helper_functions import GetUserConverter, confirm_action
+from ..helpers import helper_functions, fuzzy_user
+from ..helpers.helper_functions import confirm_action
+from ..helpers.fuzzy_user import FuzzyUser
 import re
 
 
@@ -22,7 +23,7 @@ class AdminCommands:
     @commands.command(usage="purge (count) (user)")
     @commands.has_permissions(manage_messages=True)
     async def purge(
-        self, ctx: commands.Context, limit: int = 100, user: GetUserConverter = "all"
+        self, ctx: commands.Context, limit: int = 100, fuzzy_user: FuzzyUser = "all"
     ):
         """Deletes a number of messages by a user.
 
@@ -31,8 +32,10 @@ class AdminCommands:
 
         Keyword Arguments:
             limit {int} -- The max number of messages to purge (default: {100})
-            user {GetUserConverter} -- Fuzzy user getting (default: {"all"})
+            fuzzy_user {FuzzyUser} -- Fuzzy user getting (default: {"all"})
         """
+
+        user, _ = fuzzy_user
 
         if user == None or user.casefold() == "all":
             await ctx.channel.purge(limit=limit)
@@ -42,7 +45,7 @@ class AdminCommands:
 
         await ctx.channel.purge(limit=limit, check=check_user)
 
-    @commands.command(aliases=["clearall", "clear-all", "clear all"], usage="clearall")
+    @commands.command(aliases=["clearall", "clear-all"], usage="clearall")
     @commands.cooldown(
         1, 86400, commands.BucketType.user
     )  # So one person can't abuse the feature.
@@ -93,19 +96,19 @@ class AdminCommands:
 
     @commands.command(usage="kick [user] (reason)")
     @commands.has_permissions(kick_members=True)
-    async def kick(self, ctx: commands.context, user: GetUserConverter, reason=""):
+    async def kick(self, ctx: commands.context, user: FuzzyUser, reason=""):
         """Kick a user.
 
         Arguments:
             ctx {commands.context} -- Information about where a command was run.
-            user {discord.User} -- Gets a `discord.User` using fuzzy conversion.
+            user {FuzzyUser} -- Gets a `discord.User` using fuzzy conversion.
 
         Keyword Arguments:
             reason {str} -- Why the user is being kicked (default: {""})
         """
         try:
             await ctx.kick(user)
-        except:
+        except discord.HTTPException:
             await ctx.send("Could not kick user!")
             return
         await ctx.send(f"Kicked {user}")
