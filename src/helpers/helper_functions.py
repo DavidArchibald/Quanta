@@ -57,7 +57,7 @@ class HelperCommands:
 
 
 async def confirm_action(
-    ctx: commands.context,
+    ctx: commands.Context,
     message="Are you sure?",
     base_message=None,
     timeout: float = 60.0,
@@ -65,7 +65,7 @@ async def confirm_action(
     """Checks if you're sure you want to continue.
 
     Arguments:
-        ctx {commands.context} -- Information about where the command was run.
+        ctx {commands.Context} -- Information about where the command was run.
 
     Keyword Arguments:
         message {str} -- What it asks you about. (default: {"Are you sure?"})
@@ -79,7 +79,10 @@ async def confirm_action(
     if base_message is not None:
         confirm = base_message.edit(content=message)
     else:
-        confirm = await ctx.send(message)
+        try:
+            confirm = await ctx.send(message)
+        except discord.HTTPException:
+            return False
 
     reaction = await wait_for_reactions(ctx, confirm, (emojis.yes, emojis.no))
 
@@ -141,6 +144,14 @@ async def wait_for_reactions(
                 await message.remove_reaction(ctx.bot.user, reaction)
 
     return reaction
+
+
+def escape_markdown(text):
+    markdown_characters = ["*", "_", "`"]
+    for character in markdown_characters:
+        text = text.replace(character, "\\" + character)
+
+    return text
 
 
 def setup(bot, database):

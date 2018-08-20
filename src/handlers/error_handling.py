@@ -35,19 +35,24 @@ class CommandErrorHandler:
             return
 
         error = getattr(error, "original", error)
-        command = ctx.message.content.split(" ")[0][len(ctx.prefix) :]
-
-        if isinstance(error, commands.CommandNotFound):
+        command_name = ctx.invoked_with
+        if isinstance(error, commands.CheckFailure):
+            is_owner = await ctx.bot.is_owner(ctx.message.author)
+            if is_owner == True:
+                await ctx.command.reinvoke(ctx)
+            else:
+                await ctx.send(f"You can't use the command `{command_name}`, sorry!")
+        elif isinstance(error, commands.CommandNotFound):
             all_command_names = list(
                 itertools.chain(
                     *[[*command.aliases, command.name] for command in ctx.bot.commands]
                 )
             )
             closest_command_name, closest_ratio = process.extractOne(
-                command, all_command_names
+                command_name, all_command_names
             )
 
-            no_command = f"I don't have the command `{command}`, sorry!"
+            no_command = f"I don't have the command `{command_name}`, sorry!"
             try_help_command = (
                 f"Try using `{ctx.prefix}help` for information about my commands."
             )
@@ -62,8 +67,7 @@ class CommandErrorHandler:
                 )
                 if reaction is None:
                     await message.edit(content=try_help_command)
-                    return
-                if reaction.emoji == emojis.yes:
+                elif reaction.emoji == emojis.yes:
                     await message.edit(
                         content=f"I'll run the command `{closest_command_name}`` for you :)"
                     )
@@ -76,24 +80,24 @@ class CommandErrorHandler:
                     )
 
                     await ctx.bot.process_commands(new_message)
-                    return
-
-            return
-        elif isinstance(error, discord.Forbidden):
-            print(error)
-            await ctx.send(
-                f"I don't have the permissions to do that, sorry! I need the"
-            )
-            return
         elif isinstance(error, commands.DisabledCommand):
-            await ctx.send(f'"{command}" has been disabled.')
-            return
+            is_owner = await ctx.bot.is_owner(ctx.message.author)
+            if is_owner == True:
+                await ctx.command.reinvoke(ctx)
+            else:
+                await ctx.send(f"The command `{command_name}` has been disabled.")
+        elif isinstance(error, discord.Forbidden):
+            await ctx.send(
+                f"Something went wrong on Discord's side. Sorry for the inconvenience."
+            )
         elif isinstance(error, commands.NoPrivateMessage):
             try:
-                await ctx.send(f'"{command}" cannot be used in Private Messages.')
-                return
+                await ctx.send(
+                    f"The `{command_name}` cannot be used in Private Messages."
+                )
             except discord.Forbidden:
                 pass
+            return
 
         print(f"Ignoring exception in command {ctx.command}:", file=sys.stderr)
         traceback.print_exception(

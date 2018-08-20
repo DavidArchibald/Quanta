@@ -29,7 +29,7 @@ class FuzzyUser(commands.Converter):
 
     async def convert(
         self,
-        ctx: commands.context,
+        ctx: commands.Context,
         identifier: str,
         base_message: discord.Message = None,
     ):

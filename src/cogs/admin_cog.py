@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 
-import asyncio
-
 import discord
 from discord.ext import commands
+
+import asyncio
+import re
 
 from ..helpers import helper_functions, fuzzy_user
 from ..helpers.helper_functions import confirm_action
 from ..helpers.fuzzy_user import FuzzyUser
-import re
 
 
 class AdminCommands:
@@ -91,27 +91,44 @@ class AdminCommands:
     )  # Only allow this to be used once a day in a channel.
     @commands.has_permissions(manage_messages=True)
     async def stop_clearing(self, ctx: commands.Context):
+        """Stops `clear_all` from removing all the message.
+
+        Arguments:
+            ctx {commands.Context} -- Information about where the command was run.
+        """
+
         if ctx.channel.id in self.clearing_channels:
             self.clearing_channels.remove(ctx.channel.id)
 
     @commands.command(usage="kick [user] (reason)")
     @commands.has_permissions(kick_members=True)
-    async def kick(self, ctx: commands.context, user: FuzzyUser, reason=""):
+    async def kick(self, ctx: commands.Context, user: FuzzyUser, reason=""):
         """Kick a user.
 
         Arguments:
-            ctx {commands.context} -- Information about where a command was run.
+            ctx {commands.Context} -- Information about where a command was run.
             user {FuzzyUser} -- Gets a `discord.User` using fuzzy conversion.
 
         Keyword Arguments:
             reason {str} -- Why the user is being kicked (default: {""})
         """
+        for_reason = f"For {reason}" if reason is not None and reason != "" else ""
+
         try:
             await ctx.kick(user)
         except discord.HTTPException:
-            await ctx.send("Could not kick user!")
+            await ctx.send(f"Could not kick user {user}!")
             return
-        await ctx.send(f"Kicked {user}")
+
+        if not user.is_blocked():
+            try:
+                await user.send(
+                    f"You were kicked from the server {ctx.server} for {for_reason}."
+                )
+            except discord.HTTPException:
+                pass
+
+        await ctx.send(f"Kicked {user} for {for_reason}.")
 
     @commands.command(
         aliases=[
@@ -124,11 +141,11 @@ class AdminCommands:
         usage="setprefix [prefix]",
     )
     @commands.has_permissions(manage_channels=True)
-    async def set_prefix(self, ctx: commands.context, *, prefix: str = None):
+    async def set_prefix(self, ctx: commands.Context, *, prefix: str = None):
         """Change the prefix for the channel
 
         Arguments:
-            ctx {commands.context} -- Information about where a command was run.
+            ctx {commands.Context} -- Information about where a command was run.
             prefix {str} -- The prefix to set the guild to use.
         """
 
@@ -137,7 +154,7 @@ class AdminCommands:
 
         current_prefix = await self.database.get_prefix(ctx)
         if prefix == current_prefix:
-            await ctx.send(f"Prefix is already set to `{prefix}`!")
+            await ctx.send(f"The prefix is already set to `{prefix}`!")
             return
 
         if prefix is None:
@@ -152,6 +169,28 @@ class AdminCommands:
 
         if not isinstance(prefix, str):
             prefix = str(prefix)
+
+        has_reference = re.compile(
+            r"(<@(?:!?|&|#)\d+>)"
+        )  # Checks if the string has a user or role mention or a channel "reference".
+        references = re.findall(has_reference, prefix)
+        if references is not None or "@everyone" in prefix or "@here" in prefix:
+            # References have a zero width joiner to doubly prevent mentions
+            raw_bot_mention = f"<@{ctx.bot.user.id}>"
+            bot_mention = ctx.bot.user.mention
+            if prefix == raw_bot_mention:
+                await ctx.send(
+                    f"I already respond to {bot_mention}. No need to set it to the prefix."
+                )
+            elif raw_bot_mention in references:
+                await ctx.send(
+                    f"I already respond to {bot_mention}, adding extra characters just makes it confusing."
+                )
+            else:
+                await ctx.send(
+                    f'You can\'t include "references" such as @user, #‍channel, @‍everyone, or @‍here in your prefix, sorry.'
+                )
+            return
 
         prefix_casefold = prefix.casefold()
 

@@ -12,8 +12,6 @@ import os
 import sys
 import signal
 
-import datetime
-
 import traceback
 import logging
 import importlib
@@ -57,6 +55,12 @@ async def on_message(message):
         await bot.process_commands(message)
 
 
+# Quanta won't respond to other bots.
+@bot.check
+async def not_bot(message):
+    return not message.author.bot
+
+
 if __name__ == "__main__":
     exit_handler = exit_handling.init(bot)
 
@@ -68,7 +72,6 @@ if __name__ == "__main__":
 
     # The help command has to be removed before the cogs are loaded.
     bot.remove_command("help")
-    bot.launch_time = datetime.datetime.now()
 
     # This basically clones `bot.import_extension` in order to pass in the database object instead.
     for path in cogs.values():

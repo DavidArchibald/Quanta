@@ -72,11 +72,11 @@ class Database:
             logging.warn('The database refused to connect! Falling back to "?" prefix.')
             print(exception)
 
-    async def get_prefix(self, ctx: commands.context):
+    async def get_prefix(self, ctx: commands.Context):
         """Gets the channel's prefix for running with
 
         Arguments:
-            ctx {commands.context} -- Information about where the command was run.
+            ctx {commands.Context} -- Information about where the command was run.
 
         Returns:
             str -- The channel's prefix
@@ -114,7 +114,7 @@ class Database:
         return row["prefix"]
 
     @with_connection()
-    async def set_prefix(self, ctx: commands.context, prefix: str, connection=None):
+    async def set_prefix(self, ctx: commands.Context, prefix: str, connection=None):
         """Sets the server prefix.
 
         Arguments:

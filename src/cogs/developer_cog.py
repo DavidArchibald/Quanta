@@ -30,6 +30,7 @@ class DeveloperCommands:
 
     def __init__(self, database):
         self.database = database
+        self._last_result = None
 
     @commands.command(hidden=True, aliases=["speak"], usage="say [message]")
     async def say(self, ctx: commands.Context, *, text: str):
@@ -40,7 +41,6 @@ class DeveloperCommands:
             text {str} -- The text for the bot to say.
         """
 
-        await ctx.message.delete()
         await ctx.send(text)
 
     @commands.command(
@@ -62,7 +62,7 @@ class DeveloperCommands:
         try:
             wait = int(wait)
         except ValueError:
-            ctx.send(f'Invalid argument "{wait}" for wait.')
+            await ctx.send(f'Invalid argument "{wait}" for wait.')
             return
 
         confirm, message = await confirm_action(ctx)
@@ -137,7 +137,6 @@ class DeveloperCommands:
     @commands.command(
         hidden=True, aliases=["force", "dev"], usage="sudo (quiet) [command] [*args]"
     )
-    @commands.is_owner()
     async def sudo(self, ctx: commands.Context, command=None, *, arguments=""):
         """Force a command to be run without perms from the user.
 
@@ -157,15 +156,26 @@ class DeveloperCommands:
         await new_ctx.command.callback(*new_ctx.args, **new_ctx.kwargs)
 
     @commands.command(hidden=True, aliases=["run"], usage="eval [code]")
-    async def eval(self, ctx: commands.Context, quiet: bool = False):
+    async def eval(self, ctx: commands.Context, *, code: str):
         """Runs arbitrary code.
 
         Arguments:
             ctx {commands.Context} -- Information about where the command was run.
         """
-        print(ctx, quiet)
 
-        pass
+        environment = {
+            "bot": ctx.bot,
+            "ctx": ctx,
+            "channel": ctx.channel,
+            "author": ctx.author,
+            "guild": ctx.guild,
+            "message": ctx.message,
+            "_": self._last_result,
+        }
+
+        environment.update(globals())
+
+        code = cleanup_code(code)
 
     @commands.command(hidden=True)
     async def update(self, ctx: commands.Context):
@@ -190,15 +200,57 @@ class DeveloperCommands:
         stdout, stderr = await git_update.communicate()
         error = stderr.decode().strip()
         output = stdout.decode().strip()
-        result = f"```css\n{error}\n{output}```"
+        result = f"```diff\n{error}\n{output}```"
         if len(result) > 1000:
             result_truncated = "\n**---Output Truncated---**"
-            result_truncated_length = 23
-            result = result[1000 - result_truncated_length] + result_truncated
+            result = result[1000 - len(result_truncated)] + result_truncated
         await ctx.send(result)
 
     async def __local_check(self, ctx):
         return await ctx.bot.is_owner(ctx.author)
+
+
+def cleanup_code(content):
+    """Removes codeblocks from string.
+
+    Arguments:
+        content {str} -- String with potential codeblocks.
+    """
+
+    code_languages = [
+        "asciidoc",
+        "autohotkey",
+        "bash",
+        "coffeescript",
+        "cpp",
+        "cs",
+        "css",
+        "diff",
+        "fix",
+        "glsl",
+        "ini",
+        "json",
+        "md",
+        "markdown",
+        "ml",
+        "prolog",
+        "py",
+        "python",
+        "tex",
+        "xl",
+        "xml",
+    ]
+
+    if content.startswith("```") and content.endswith("```"):
+        content = content[3:-3]
+        content_lines = content.split("\n")
+        if content_lines[0].trim().casefold() in code_languages:
+            content = content_lines[1:].join("\n")
+
+    if content.startswith("`") and content.endswith("`"):
+        content = content[1:-1]
+
+    return content
 
 
 def setup(bot, database):

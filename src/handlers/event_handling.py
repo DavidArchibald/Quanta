@@ -3,6 +3,8 @@
 import discord
 from discord.ext import commands
 
+import datetime
+
 import logging
 import textwrap
 import traceback
@@ -15,6 +17,8 @@ class BotEventHandler:
         self.bot = bot
 
     async def on_ready(self):
+        self.bot.launch_time = datetime.datetime.now()
+
         emojis.get_emojis(self.bot)
         logged_in_message = textwrap.dedent(
             f"""\
