@@ -4,8 +4,11 @@ import discord
 from discord.ext import commands
 
 import asyncio
+import aiohttp
 
 import binascii
+import base64
+import json
 
 import datetime
 import humanize
@@ -15,13 +18,13 @@ import inspect
 import re
 import textwrap
 
-import base64
-
 import random
 
-from ..helpers import simple_paginator
-from ..helpers.simple_paginator import SimplePaginator
-from ..constants import uptime, latency
+import html
+
+from ..constants import emojis, latency, uptime
+from ..helpers import helper_functions, session_helper
+from ..helpers.helper_functions import wait_for_reactions
 
 
 class GeneralCommands:
@@ -132,7 +135,76 @@ class GeneralCommands:
 
     @commands.command(usage="trivia")
     async def trivia(self, ctx: commands.Context):
-        pass
+        something_went_wrong = f"Sorry, something went wrong with the trivia API."
+        url = "https://opentdb.com/api.php?amount=1"
+
+        session = await session_helper.get_session()
+        try:
+            async with session.get(url) as response:
+                if response.status != 200:
+                    await ctx.send(something_went_wrong)
+                    return
+
+                try:
+                    trivia = json.loads(await response.text())["results"][0]
+
+                    category = html.unescape(trivia["category"])
+                    question = html.unescape(trivia["question"])
+                    question_type = html.unescape(trivia["type"])
+                    correct_answer = html.unescape(trivia["correct_answer"])
+                    incorrect_answers = [
+                        html.unescape(item) for item in trivia["incorrect_answers"]
+                    ]
+                    answers = [correct_answer, *incorrect_answers]
+
+                    if question_type != "boolean":
+                        random.shuffle(answers)
+                except (json.decoder.JSONDecodeError, KeyError, IndexError, ValueError):
+                    await ctx.send(something_went_wrong)
+                    return
+
+                formatted_answers = [
+                    f"{index + 1}. {answer}" for index, answer in enumerate(answers)
+                ]
+
+                embed = discord.Embed(title=category, description=f"{question}")
+                embed.add_field(name="\u200B", value="\n".join(formatted_answers))
+
+                message = await ctx.send(embed=embed)
+                number_emojis = emojis.number_emojis[1 : len(answers) + 1]
+
+                reaction = await wait_for_reactions(
+                    ctx, message, number_emojis, remove_reactions=False
+                )
+
+                chosen_number = number_emojis.index(reaction.emoji)
+                correct_number = answers.index(correct_answer)
+                correct_emoji = number_emojis[correct_number]
+
+                formatted_answers[
+                    chosen_number
+                ] = f"**{formatted_answers[chosen_number]}**"
+
+                if reaction.emoji == correct_emoji:
+                    embed.colour = 0x00ff00
+                    embed.set_field_at(
+                        0, name="\u200B", value="\n".join(formatted_answers)
+                    )
+                else:
+                    formatted_answers[
+                        correct_number
+                    ] = f"***{formatted_answers[correct_number]}***"
+
+                    embed.colour = 0xff0000
+                    embed.set_field_at(
+                        0, name="\u200B", value="\n".join(formatted_answers)
+                    )
+
+                await message.edit(embed=embed)
+
+        except aiohttp.ClientError:
+            await ctx.send(something_went_wrong)
+            return
 
 
 def setup(bot, database):

@@ -25,6 +25,7 @@ class HelperCommands:
             await states.error(ctx, exception)
 
     @commands.command(usage="wait [time]")
+    @commands.is_owner()
     async def wait(self, ctx: commands.Context, time: int = 1):
         """Waits for a while. Mostly for testing .kill
 
@@ -47,13 +48,17 @@ class HelperCommands:
     @commands.command(usage="unusable")
     @commands.check(lambda _: False)
     async def unusable(self, ctx: commands.Context):
-        """Used for testing the Sudo command... or commands.check glitches
+        """Used for testing the Sudo command or owner overrides... or commands.check glitches
 
         Arguments:
             ctx {commands.Context} -- Information about where the command was run.
         """
+        is_owner = await ctx.bot.is_owner(ctx.message.author)
 
-        await ctx.send("This is supposed to be unusable... How're you using this?")
+        if is_owner == True:
+            await ctx.send("Hey owner!")
+        else:
+            await ctx.send("This is supposed to be unusable... How're you using this?")
 
 
 async def confirm_action(

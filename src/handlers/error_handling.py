@@ -97,12 +97,11 @@ class CommandErrorHandler:
                 )
             except discord.Forbidden:
                 pass
-            return
-
-        print(f"Ignoring exception in command {ctx.command}:", file=sys.stderr)
-        traceback.print_exception(
-            type(error), error, error.__traceback__, file=sys.stderr
-        )
+        else:
+            print(f"Ignoring exception in command {ctx.command}:", file=sys.stderr)
+            traceback.print_exception(
+                type(error), error, error.__traceback__, file=sys.stderr
+            )
 
 
 def setup(bot, database):
