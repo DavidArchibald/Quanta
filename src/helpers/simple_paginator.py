@@ -6,6 +6,8 @@
 import asyncio
 import discord
 
+from typing import List
+
 
 async def pager(entries, chunk: int):
     for x in range(0, len(entries), chunk):
@@ -37,7 +39,7 @@ class SimplePaginator:
         "names",
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         self.entries = kwargs.get("entries", None)
         self.extras = kwargs.get("extras", None)
 
@@ -54,8 +56,8 @@ class SimplePaginator:
         self.ordered = kwargs.get("ordered", False)
 
         self.controller = None
-        self.pages = []
-        self.names = []
+        self.pages: List[discord.Embed] = []
+        self.names: List = []
         self.base = None
 
         self.current = 0

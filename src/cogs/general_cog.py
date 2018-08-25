@@ -21,10 +21,12 @@ import textwrap
 import random
 
 import html
+import copy
 
 from ..constants import emojis, latency, uptime
 from ..helpers import helper_functions, session_helper
 from ..helpers.helper_functions import wait_for_reactions
+from ..helpers.database_helper import Database
 
 
 class GeneralCommands:
@@ -32,11 +34,11 @@ class GeneralCommands:
 
     icon = "<:quantaperson:473983023797370880>"
 
-    def __init__(self, database):
-        self.database = database
+    def __init__(self, database: Database) -> None:
+        self.database: Database = database
 
     @commands.command(usage="ping")
-    async def ping(self, ctx: commands.Context, round_to=4):
+    async def ping(self, ctx, round_to=4):
         """Returns the bot latency.
 
         Arguments:
@@ -65,7 +67,7 @@ class GeneralCommands:
             await ctx.send(message)
 
     @commands.command(aliases=["commands"], usage="help (command)")
-    async def help(self, ctx: commands.Context, command=None):
+    async def help(self, ctx, command=None):
         """Show a complete list of commands you can use. Or information about a specific one.
 
         Arguments:
@@ -83,26 +85,25 @@ class GeneralCommands:
                 ),
             )
             for name, cog in ctx.bot.cogs.items():
-                name = re.sub(
+                title_case_name = re.sub(
                     "([a-z])(?=[A-Z])", r"\1 ", name
                 )  # Turns PascalCase to Title Case
-                members = inspect.getmembers(cog)
                 description = ""
+                cog_commands = ctx.bot.get_cog_commands(name)
                 icon = getattr(cog, "icon", None)
-                for _, member in members:
-                    if not isinstance(member, commands.Command):
-                        continue
-                    command = member
+                for cog_command in cog_commands:
                     command_usage = (
-                        command.usage if command.usage is not None else command.name
+                        cog_command.usage
+                        if cog_command.usage is not None
+                        else cog_command.name
                     )
-                    if command.hidden == True:
+                    if cog_command.hidden == True:
                         continue
                     description += f"**{command_usage}**\n"
                 if description:
-                    header = name
+                    header = title_case_name
                     if icon is not None:
-                        header = f"{icon} {name}"
+                        header = f"{icon} {title_case_name}"
                     embed.add_field(name=header, value=description, inline=True)
 
             embed.add_field(
@@ -155,9 +156,11 @@ class GeneralCommands:
                     incorrect_answers = [
                         html.unescape(item) for item in trivia["incorrect_answers"]
                     ]
-                    answers = [correct_answer, *incorrect_answers]
 
-                    if question_type != "boolean":
+                    if question_type == "boolean":
+                        answers = ["True", "False"]
+                    else:
+                        answers = [correct_answer, *incorrect_answers]
                         random.shuffle(answers)
                 except (json.decoder.JSONDecodeError, KeyError, IndexError, ValueError):
                     await ctx.send(something_went_wrong)
@@ -167,25 +170,45 @@ class GeneralCommands:
                     f"{index + 1}. {answer}" for index, answer in enumerate(answers)
                 ]
 
+                unchecked_answers = [
+                    f"{emojis.radio_off} {answer}" for answer in formatted_answers
+                ]
+
                 embed = discord.Embed(title=category, description=f"{question}")
-                embed.add_field(name="\u200B", value="\n".join(formatted_answers))
+                embed.add_field(name="\u200B", value="\n".join(unchecked_answers))
 
                 message = await ctx.send(embed=embed)
                 number_emojis = emojis.number_emojis[1 : len(answers) + 1]
 
-                reaction = await wait_for_reactions(
-                    ctx, message, number_emojis, remove_reactions=False
+                too_slow = copy.copy(embed)
+                too_slow.clear_fields()
+                too_slow.add_field(
+                    name="\u200B",
+                    value=f"Sorry, you ran out of time. The correct answer was {correct_answer}.",
                 )
+
+                reaction = await wait_for_reactions(
+                    ctx,
+                    message,
+                    number_emojis,
+                    timeout=1,
+                    timeout_message=too_slow,
+                    remove_reactions=False,
+                    remove_reactions_on_timeout=True,
+                )
+                if reaction is None:
+                    return
 
                 chosen_number = number_emojis.index(reaction.emoji)
                 correct_number = answers.index(correct_answer)
                 correct_emoji = number_emojis[correct_number]
 
-                formatted_answers[
-                    chosen_number
-                ] = f"**{formatted_answers[chosen_number]}**"
+                chosen_answers = copy.copy(formatted_answers)
 
                 if reaction.emoji == correct_emoji:
+                    chosen_answers[
+                        chosen_number
+                    ] = f"{emojis.circle_x} {formatted_answers[chosen_number]}"
                     embed.colour = 0x00ff00
                     embed.set_field_at(
                         0, name="\u200B", value="\n".join(formatted_answers)
@@ -193,7 +216,7 @@ class GeneralCommands:
                 else:
                     formatted_answers[
                         correct_number
-                    ] = f"***{formatted_answers[correct_number]}***"
+                    ] = f"{emojis.circle_check} {formatted_answers[correct_number]}"
 
                     embed.colour = 0xff0000
                     embed.set_field_at(
@@ -207,5 +230,5 @@ class GeneralCommands:
             return
 
 
-def setup(bot, database):
+def setup(bot: commands.Bot, database):
     bot.add_cog(GeneralCommands(database))

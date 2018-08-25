@@ -9,6 +9,8 @@ import operator
 import re
 import importlib
 
+from typing import Union, Mapping
+
 from ..constants import emojis
 from .bot_states import BotStates
 
@@ -63,10 +65,10 @@ class HelperCommands:
 
 async def confirm_action(
     ctx: commands.Context,
-    message="Are you sure?",
-    base_message=None,
+    message: Union[str, discord.Embed, Mapping[str, discord.Embed]] = "Are you sure?",
+    base_message: discord.Message = None,
     timeout: float = 60.0,
-):
+) -> tuple:
     """Checks if you're sure you want to continue.
 
     Arguments:
@@ -80,14 +82,18 @@ async def confirm_action(
     Returns:
         (bool, commands.Message) -- The confirmation boolean and the message used to ask.
     """
+    embed = None
+    if isinstance(message, iter):
+        embed = message[1]
+        message = message[0]
 
     if base_message is not None:
-        confirm = base_message.edit(content=message)
+        confirm = base_message.edit(content=message, embed=embed)
     else:
         try:
-            confirm = await ctx.send(message)
+            confirm = await ctx.send(content=message, embed=embed)
         except discord.HTTPException:
-            return False
+            return (False, confirm)
 
     reaction = await wait_for_reactions(ctx, confirm, (emojis.yes, emojis.no))
 
@@ -99,18 +105,28 @@ async def confirm_action(
 
 async def wait_for_reactions(
     ctx: commands.Context,
-    message: discord.message,
-    reactions: iter,
+    message: discord.Message,
+    reactions: Union[discord.Reaction, discord.Emoji, discord.PartialEmoji, str],
     timeout: int = 60.0,
-    remove_reactions=True,
-):
+    timeout_message: Union[
+        str, discord.Embed, Mapping[str, discord.Embed]
+    ] = "Timed out!",
+    remove_reactions: bool = True,
+    remove_reactions_on_timeout: bool = None,
+) -> discord.Reaction:
+    if remove_reactions_on_timeout is None:
+        remove_reactions_on_timeout = remove_reactions
+
+    if isinstance(timeout_message, iter):
+        pass
+
     for reaction in list(reactions):
         try:
             await message.add_reaction(reaction)
         except (discord.NotFound, discord.InvalidArgument):
             reactions.remove(reaction)
         except discord.HTTPException:
-            pass
+            return
 
     while True:
         try:
@@ -120,8 +136,8 @@ async def wait_for_reactions(
                 check=lambda reaction, _: reaction.message.id == message.id,
             )
         except asyncio.TimeoutError:
-            await message.edit(embed=None, content="Timeout out!")
-            if remove_reactions == True:
+            await message.edit(content=timeout_message)
+            if remove_reactions_on_timeout == True:
                 try:
                     await message.clear_reactions()
                 except discord.HTTPException:
@@ -151,7 +167,7 @@ async def wait_for_reactions(
     return reaction
 
 
-def escape_markdown(text):
+def escape_markdown(text: str) -> str:
     markdown_characters = ["*", "_", "`"]
     for character in markdown_characters:
         text = text.replace(character, "\\" + character)
@@ -159,5 +175,5 @@ def escape_markdown(text):
     return text
 
 
-def setup(bot, database):
+def setup(bot: commands.bot, database):
     bot.add_cog(HelperCommands())

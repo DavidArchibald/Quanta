@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+
+import asyncio
+
+import discord
+from discord.ext import commands
+import discord.utils
+
+import os
+import sys
+import signal
+
+import traceback
+import logging
+import importlib
+import yaml
+
+from .helpers import logs_helper
+from .helpers.database_helper import Database
+from .handlers.exit_handling import ExitHandler
+
+from typing import Optional, Dict, List
+
+exit_handler: Optional[ExitHandler] = None
+
+cogs: Dict[str, str] = ...
+
+class Object(object): ...
+
+async def get_prefix_wrapper(bot: commands.Bot, message: discord.Message) -> List[str]:
+    ctx: Object = ...
+    prefix: str = ...
+
+database: Database = ...
+bot: commands.Bot = ...
+
+async def on_message(message: discord.Message): ...
+async def not_bot(message: discord.Message) -> bool: ...
+
+if __name__ == "__main__":
+    exit_handler: ExitHandler = ...
+
+    loop: asyncio.AbstractEventLoop = ...
+
+    lib: module = ...
+
+    cog: discord.Cog = ...
+
+    config_path: str = ...
+    config: Dict = ...
+
+    bot_info: str = ...
+    token: str = ...

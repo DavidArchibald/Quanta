@@ -7,11 +7,13 @@ from threading import Lock
 import discord
 from discord.ext import commands
 
-exit_handler = None
+from typing import Optional
+
+exit_handler: Optional[ExitHandler] = None
 
 
 class ExitHandler:
-    def __init__(self):
+    def __init__(self) -> None:
         self.commands_running = 0
         self.lock = Lock()
         self.SIGTERM = False
@@ -64,7 +66,7 @@ class ExitHandler:
         signal.signal(signal.SIGTERM, self.signal_terminate_handler)
         signal.signal(signal.SIGINT, self.signal_interupt_handler)
 
-    def is_terminating(self):
+    def is_terminating(self) -> bool:
         return self.SIGTERM
 
     def terminate(self):
@@ -79,16 +81,16 @@ class ExitHandler:
         self.SIGTERM = False
         self.lock.release()
 
-    def get_commands_running(self):
+    def get_commands_running(self) -> int:
         return self.commands_running
 
 
-def get_exit_handler():
+def get_exit_handler() -> Optional[ExitHandler]:
     global exit_handler
     return exit_handler
 
 
-def init(bot):
+def init(bot) -> ExitHandler:
     global exit_handler
     exit_handler = ExitHandler()
     exit_handler.create_signals()

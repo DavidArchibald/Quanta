@@ -15,15 +15,16 @@ from fuzzywuzzy import process
 from ..constants import emojis
 from ..helpers import helper_functions
 from ..helpers.helper_functions import wait_for_reactions
+from ..helpers.database_helper import Database
 
 
 class CommandErrorHandler:
     """Handles any errors the bot will throw."""
 
-    def __init__(self, database):
-        self.database = database
+    def __init__(self, database: Database) -> None:
+        self.database: Database = database
 
-    async def on_command_error(self, ctx: commands.Context, error: Exception):
+    async def on_command_error(self, ctx: commands.Context, error: BaseException):
         """The event triggered when an error is raised while invoking a command.
 
         Arguments:
@@ -104,5 +105,5 @@ class CommandErrorHandler:
             )
 
 
-def setup(bot, database):
+def setup(bot: commands.Bot, database):
     bot.add_cog(CommandErrorHandler(database))

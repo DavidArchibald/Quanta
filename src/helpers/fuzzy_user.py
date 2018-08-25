@@ -14,7 +14,7 @@ from ..constants import emojis
 from . import helper_functions
 from .helper_functions import wait_for_reactions
 
-from typing import Union
+from typing import Union, Tuple, Optional
 
 
 class FuzzyUser(commands.Converter):
@@ -32,7 +32,9 @@ class FuzzyUser(commands.Converter):
         ctx: commands.Context,
         identifier: str,
         base_message: discord.Message = None,
-    ):
+    ) -> Tuple[
+        Optional[Union[discord.User, discord.Member, str]], Optional[discord.Message]
+    ]:
         result_count = 3  # Trim the results to be 3
         # This will only support up to 10 results.
         # A possible fix would be "pages"
@@ -113,7 +115,7 @@ class FuzzyUser(commands.Converter):
         user: Union[discord.User, discord.Member, str],
         message: discord.Message,
         no_user_message: str = None,
-    ):
+    ) -> Union[discord.User, discord.Member]:
         if isinstance(user, str):
             no_user_message = no_user_message or f'Couldn\'t find the user "{user}".'
             if message is None:
@@ -143,5 +145,5 @@ class GetUser:
             await message.edit(content=content, embed=None)
 
 
-def setup(bot, database):
+def setup(bot: commands.Bot, database):
     bot.add_cog(GetUser())

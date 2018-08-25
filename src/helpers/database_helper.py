@@ -23,6 +23,8 @@ from .cache import LFUCache
 
 from .helper_functions import HelperCommands
 
+from typing import Optional
+
 helperCommands = HelperCommands()
 
 
@@ -48,7 +50,9 @@ def with_connection():
 
 
 class Database:
-    def __init__(self, db_info_path=None, loop=None):
+    def __init__(
+        self, db_info_path: str = None, loop: asyncio.AbstractEventLoop = None
+    ) -> None:
         source = os.path.dirname(os.path.dirname(__file__))
         database_info_path = db_info_path or os.path.join(source, "secrets/config.yaml")
 
@@ -72,7 +76,7 @@ class Database:
             logging.warn('The database refused to connect! Falling back to "?" prefix.')
             print(exception)
 
-    async def get_prefix(self, ctx: commands.Context):
+    async def get_prefix(self, ctx: commands.Context) -> str:
         """Gets the channel's prefix for running with
 
         Arguments:
@@ -97,7 +101,12 @@ class Database:
         return prefix
 
     @with_connection()
-    async def _get_prefix(self, guild_id, connection=None):
+    async def _get_prefix(
+        self, guild_id: int, connection: Optional[asyncpg.Connection] = None
+    ) -> str:
+        if connection is None:
+            return "?"
+
         row = await connection.fetchrow(
             "SELECT prefix FROM prefixes WHERE serverId=$1", guild_id
         )
@@ -114,13 +123,21 @@ class Database:
         return row["prefix"]
 
     @with_connection()
-    async def set_prefix(self, ctx: commands.Context, prefix: str, connection=None):
+    async def set_prefix(
+        self,
+        ctx: commands.Context,
+        prefix: str,
+        connection: Optional[asyncpg.Connection] = None,
+    ):
         """Sets the server prefix.
 
         Arguments:
             ctx {discord.Context} -- Information about where the command was run.
             prefix {str} -- The prefix for the guild.
         """
+        if connection is None:
+            raise RuntimeError("The prefix cannot be set without a connection.")
+
         if prefix is None:
             prefix = ""
 
@@ -137,7 +154,7 @@ class Database:
             )
             self.cache.set(guild_id, prefix)
 
-    def is_connected(self):
+    def is_connected(self) -> bool:
         """Returns if the database is connected or not.
 
         Returns:
@@ -148,6 +165,9 @@ class Database:
 
     async def close(self, timeout: int = 10):
         """Closes the connection to the database."""
+        if self._pool is None:
+            raise RuntimeWarning("The connection has already been closed.")
+
         if timeout not in (0, -1, None):
             await asyncio.wait_for(self._pool.close(), timeout)
 

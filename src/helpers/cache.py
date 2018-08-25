@@ -3,9 +3,11 @@
 """Code by Shang Wang(epicshane) from the gist https://gist.github.com/epicshane/032c25c78fbe6d20607a28c1a1930761#file-cachenode_freqnode-py
 """
 
+from typing import Dict
+
 
 class CacheNode(object):
-    def __init__(self, key, value, freq_node, pre, nxt):
+    def __init__(self, key, value, freq_node, pre, nxt) -> None:
         self.key = key
         self.value = value
         self.freq_node = freq_node
@@ -31,7 +33,7 @@ class CacheNode(object):
 
 
 class FreqNode(object):
-    def __init__(self, freq, pre, nxt):
+    def __init__(self, freq, pre, nxt) -> None:
         self.freq = freq
         self.pre = pre  # previous FreqNode
         self.nxt = nxt  # next FreqNode
@@ -101,8 +103,8 @@ class FreqNode(object):
 
 
 class LFUCache(object):
-    def __init__(self, capacity):
-        self.cache = {}  # {key: cache_node}
+    def __init__(self, capacity) -> None:
+        self.cache: Dict[str, CacheNode] = {}  # {key: cache_node}
         self.capacity = capacity
         self.freq_link_head = None
 

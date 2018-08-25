@@ -20,6 +20,8 @@ import yaml
 from .helpers import database_helper, logs_helper
 from .handlers import exit_handling
 
+from typing import List, Any
+
 exit_handler = None
 
 cogs = {
@@ -33,13 +35,13 @@ cogs = {
 }
 
 
-class Object(object):
-    pass
+class fake_ctx(object):
+    message: discord.Message = ...
 
 
-async def get_prefix_wrapper(bot, message):
+async def get_prefix_wrapper(bot: commands.Bot, message: discord.Message) -> List[str]:
     # I have to fake `commands.Context` because `get_context` requires the prefix, which creates an infinite loop.
-    ctx = Object()
+    ctx: fake_ctx = fake_ctx()
     ctx.message = message
     prefix = await database.get_prefix(ctx)
     return commands.when_mentioned_or(prefix)(bot, message)
@@ -50,14 +52,14 @@ bot = commands.Bot(case_insensitive=True, command_prefix=get_prefix_wrapper)
 
 
 @bot.event
-async def on_message(message):
+async def on_message(message: discord.Message):
     if exit_handler is not None and not exit_handler.is_terminating():
         await bot.process_commands(message)
 
 
 # Quanta won't respond to other bots.
 @bot.check
-async def not_bot(message):
+async def not_bot(message: discord.Message) -> bool:
     return not message.author.bot
 
 
@@ -76,12 +78,15 @@ if __name__ == "__main__":
     # This basically clones `bot.import_extension` in order to pass in the database object instead.
     for path in cogs.values():
         try:
-            lib = importlib.import_module(path)
-            if not hasattr(lib, "setup"):
+            lib: Any = importlib.import_module(
+                path
+            )  # Has to be put as any to recognize the attribute setup as potentially valid
+            if hasattr(lib, "setup"):
+                cog = lib.setup(bot, database)
+            else:
                 raise discord.ClientException(
                     "Extension does not have a setup function."
                 )
-            cog = lib.setup(bot, database)
         except Exception as exception:
             print(f"Could not add {path} due to following exception.")
             print(exception)

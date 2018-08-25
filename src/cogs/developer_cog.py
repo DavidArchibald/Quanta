@@ -14,6 +14,7 @@ import subprocess
 
 from ..helpers import bot_states
 from ..helpers.helper_functions import confirm_action
+from ..helpers.database_helpers import Database
 from ..handlers import exit_handling
 
 from ..constants import emojis
@@ -22,14 +23,16 @@ exit_handler = exit_handling.get_exit_handler()
 
 states = bot_states.BotStates()
 
+from typing import Union
+
 
 class DeveloperCommands:
     """Commands just for the developer, mainly for testing."""
 
     icon = "<:quantacode:473976436051673091>"
 
-    def __init__(self, database):
-        self.database = database
+    def __init__(self, database: Database) -> None:
+        self.database: Database = database
         self._last_result = None
 
     @commands.command(hidden=True, aliases=["speak"], usage="say [message]")
@@ -48,7 +51,7 @@ class DeveloperCommands:
         aliases=["stop", "shutdown", "end", "terminate"],
         usage="kill (wait)",
     )
-    async def kill(self, ctx: commands.Context, wait: str = 30):
+    async def kill(self, ctx: commands.Context, wait: Union[str, int] = 30):
         """Bye bye Quanta...
 
         Arguments:
@@ -137,13 +140,15 @@ class DeveloperCommands:
     @commands.command(
         hidden=True, aliases=["force", "dev"], usage="sudo (quiet) [command] [*args]"
     )
-    async def sudo(self, ctx: commands.Context, command=None, *, arguments=""):
+    async def sudo(
+        self, ctx: commands.Context, command: str = None, *, arguments: str = ""
+    ):
         """Force a command to be run without perms from the user.
 
         Arguments:
             ctx {commands.Context} -- Information about where the command was run.
-            quiet {bool} -- Whether to run silently or not.
-
+            command {str} -- The command to run.
+            arguments {str} -- The command's arguments.
         """
 
         new_message = ctx.message
@@ -198,6 +203,7 @@ class DeveloperCommands:
             )
             return
         stdout, stderr = await git_update.communicate()
+        print(type(stdout))
         error = stderr.decode().strip()
         output = stdout.decode().strip()
         result = f"```diff\n{error}\n{output}```"
@@ -206,11 +212,11 @@ class DeveloperCommands:
             result = result[1000 - len(result_truncated)] + result_truncated
         await ctx.send(result)
 
-    async def __local_check(self, ctx):
+    async def __local_check(self, ctx: commands.Context) -> bool:
         return await ctx.bot.is_owner(ctx.author)
 
 
-def cleanup_code(content):
+def cleanup_code(content: str) -> str:
     """Removes codeblocks from string.
 
     Arguments:
@@ -244,8 +250,8 @@ def cleanup_code(content):
     if content.startswith("```") and content.endswith("```"):
         content = content[3:-3]
         content_lines = content.split("\n")
-        if content_lines[0].trim().casefold() in code_languages:
-            content = content_lines[1:].join("\n")
+        if content_lines[0].strip().casefold() in code_languages:
+            content = "\n".join(content_lines[1:])
 
     if content.startswith("`") and content.endswith("`"):
         content = content[1:-1]
@@ -253,5 +259,5 @@ def cleanup_code(content):
     return content
 
 
-def setup(bot, database):
+def setup(bot: commands.Bot, database):
     bot.add_cog(DeveloperCommands(database))

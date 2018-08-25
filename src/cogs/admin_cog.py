@@ -6,9 +6,11 @@ from discord.ext import commands
 import asyncio
 import re
 
-from ..helpers import helper_functions, fuzzy_user
 from ..helpers.helper_functions import confirm_action
 from ..helpers.fuzzy_user import FuzzyUser
+from ..helpers.database_helper import Database
+
+from typing import Union, List
 
 
 class AdminCommands:
@@ -16,14 +18,14 @@ class AdminCommands:
 
     icon = "<:quantahammer:473960604521201694>"
 
-    def __init__(self, database):
-        self.database = database
-        self.clearing_channels = []
+    def __init__(self, database: Database) -> None:
+        self.database: Database = database
+        self.clearing_channels: List[discord.TextChannel] = []
 
     @commands.command(usage="purge (count) (user)")
     @commands.has_permissions(manage_messages=True)
     async def purge(
-        self, ctx: commands.Context, limit: int = 100, fuzzy_user: FuzzyUser = "all"
+        self, ctx, limit: int = 100, fuzzy_user: Union[FuzzyUser, str] = "all"
     ):
         """Deletes a number of messages by a user.
 
@@ -35,13 +37,20 @@ class AdminCommands:
             fuzzy_user {FuzzyUser} -- Fuzzy user getting (default: {"all"})
         """
 
+        if fuzzy_user == None or (
+            isinstance(fuzzy_user, str) and fuzzy_user.casefold() == "all"
+        ):
+            await ctx.channel.purge(limit=limit)
+            return
+
         user, _ = fuzzy_user
 
-        if user == None or user.casefold() == "all":
-            await ctx.channel.purge(limit=limit)
-
-        def check_user(message):
-            return user == None or user.casefold() == "all" or message.author == user
+        def check_user(message: discord.Message) -> bool:
+            return (
+                user == None
+                or message.author == user
+                or (isinstance(user, str) and user.casefold() == "all")
+            )
 
         await ctx.channel.purge(limit=limit, check=check_user)
 
@@ -102,7 +111,7 @@ class AdminCommands:
 
     @commands.command(usage="kick [user] (reason)")
     @commands.has_permissions(kick_members=True)
-    async def kick(self, ctx: commands.Context, user: FuzzyUser, reason=""):
+    async def kick(self, ctx: commands.Context, user: FuzzyUser, reason: str = ""):
         """Kick a user.
 
         Arguments:
@@ -149,6 +158,7 @@ class AdminCommands:
             prefix {str} -- The prefix to set the guild to use.
         """
 
+        confirm = None
         message = None
         no_change_message = "Prefix has not been changed."
 

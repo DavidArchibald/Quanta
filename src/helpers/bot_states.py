@@ -13,7 +13,7 @@ from ..constants.bot_states import sad_errors
 class BotStates:
     """Sends messages about the bot's state."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._error_icon = "<:quantaerror:475409387863670810>"
 
     async def error(self, ctx: commands.Context, error: str = None, source: str = None):

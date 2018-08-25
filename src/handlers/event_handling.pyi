@@ -11,13 +11,9 @@ import traceback
 
 from ..constants import emojis
 
-
 class BotEventHandler:
-    """Handles various bot events."""
-
     def __init__(self, bot: commands.Bot) -> None:
         self.bot: commands.Bot = bot
-
     async def on_ready(self):
         self.bot.launch_time = datetime.datetime.now()
 
@@ -37,11 +33,9 @@ class BotEventHandler:
         await self.bot.change_presence(
             status=discord.Status.online, activity=discord.Game(name="?help")
         )
-
     async def on_error(self, event, *args, **kwargs):
         error = traceback.format_exc()
         logging.warning(error)
-
 
 def setup(bot: commands.Bot, database):
     bot_event_handler = BotEventHandler(bot)
