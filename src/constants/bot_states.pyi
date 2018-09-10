@@ -1,3 +1,0 @@
-from typing import List
-
-sad_errors: List[str] = ...

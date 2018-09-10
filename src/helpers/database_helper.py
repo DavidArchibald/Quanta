@@ -1,29 +1,25 @@
 #!/usr/bin/env python3
 
-import discord
 from discord.ext import commands
 
 import asyncio
 import asyncpg
 
 import os
-import time
 
-import json
 import yaml
 
 import logging
 
 import functools
-import inspect
+
+from typing import Optional
 
 # "Least Recently Used (LRU) cache"
 # Caches a (key, value) pair by how much it has been used recently.
 from .cache import LFUCache
-
 from .helper_functions import HelperCommands
 
-from typing import Optional
 
 helperCommands = HelperCommands()
 
@@ -37,7 +33,10 @@ def with_connection():
 
             if self._pool is None:
                 raise RuntimeError(
-                    "The function {method.__name__} wasn't run because the database isn't connected to."
+                    (
+                        f"The function {method.__name__} wasn't run"
+                        "because the database isn't connected to."
+                    )
                 )
             async with self._pool.acquire() as connection:
                 kwargs["connection"] = connection
@@ -85,7 +84,8 @@ class Database:
         Returns:
             str -- The channel's prefix
         """
-        # The function may still be run even if there is no connection because it doesn't have the `with_connection` decorator
+        # The function may still be run even if there is no connection
+        # because it doesn't have the `with_connection` decorator
         if self._pool is None:
             return "?"
         channel = ctx.message.channel
@@ -99,6 +99,9 @@ class Database:
             self.cache.set(guild_id, prefix)
 
         return prefix
+
+    def acquire(self, timeout=None):
+        return asyncpg.pool.PoolAcquireContext(self._pool, timeout)
 
     @with_connection()
     async def _get_prefix(

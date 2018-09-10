@@ -9,7 +9,7 @@ import logging
 import textwrap
 import traceback
 
-from ..constants import emojis
+from ..globals import emojis, variables
 
 
 class BotEventHandler:
@@ -38,12 +38,14 @@ class BotEventHandler:
             status=discord.Status.online, activity=discord.Game(name="?help")
         )
 
+        variables.is_ready = True
+
     async def on_error(self, event, *args, **kwargs):
         error = traceback.format_exc()
         logging.warning(error)
 
 
-def setup(bot: commands.Bot, database):
+def setup(bot: commands.Bot):
     bot_event_handler = BotEventHandler(bot)
 
     bot.add_cog(bot_event_handler)

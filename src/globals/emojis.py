@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import discord
 from discord.ext import commands
 
 loading = None
@@ -13,8 +12,9 @@ circle_check = None
 circle_x = None
 radio_on = None
 radio_off = None
+empty = None
 
-sweat_smile = "U\1F605"
+sweat_smile = "\U0001F605"
 
 number_emojis = [
     "0\u20e3",  # zero
@@ -46,6 +46,7 @@ def get_emojis(bot: commands.Bot):
     global circle_x
     global radio_on
     global radio_off
+    global empty
 
     loading = bot.get_emoji(478317750817914910)  # <quantaloading:478317750817914910>
     cancel = bot.get_emoji(475032169086058496)  # <:quantax:475032169086058496>
@@ -61,6 +62,7 @@ def get_emojis(bot: commands.Bot):
     radio_off = bot.get_emoji(
         482275329201930250
     )  # <:quantaradiooff:482275329201930250>
+    empty = bot.get_emoji(488182956133974017)  # "<:quantaempty:488182956133974017>"
 
     global number_emojis
     global number_reactions

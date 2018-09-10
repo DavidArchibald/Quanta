@@ -3,12 +3,12 @@
 import discord
 from discord.ext import commands
 
-import asyncio
 import re
 
 from ..helpers.helper_functions import confirm_action
 from ..helpers.fuzzy_user import FuzzyUser
-from ..helpers.database_helper import Database
+
+from ..globals import variables
 
 from typing import Union, List
 
@@ -18,11 +18,11 @@ class AdminCommands:
 
     icon = "<:quantahammer:473960604521201694>"
 
-    def __init__(self, database: Database) -> None:
-        self.database: Database = database
+    def __init__(self) -> None:
+        self.database = variables.database
         self.clearing_channels: List[discord.TextChannel] = []
 
-    @commands.command(usage="purge (count) (user)")
+    @commands.command(name="Purge", usage="purge (count) (user)")
     @commands.has_permissions(manage_messages=True)
     async def purge(
         self, ctx, limit: int = 100, fuzzy_user: Union[FuzzyUser, str] = "all"
@@ -37,7 +37,7 @@ class AdminCommands:
             fuzzy_user {FuzzyUser} -- Fuzzy user getting (default: {"all"})
         """
 
-        if fuzzy_user == None or (
+        if fuzzy_user is None or (
             isinstance(fuzzy_user, str) and fuzzy_user.casefold() == "all"
         ):
             await ctx.channel.purge(limit=limit)
@@ -47,14 +47,14 @@ class AdminCommands:
 
         def check_user(message: discord.Message) -> bool:
             return (
-                user == None
+                user is None
                 or message.author == user
                 or (isinstance(user, str) and user.casefold() == "all")
             )
 
         await ctx.channel.purge(limit=limit, check=check_user)
 
-    @commands.command(aliases=["clearall", "clear-all"], usage="clearall")
+    @commands.command(name="ClearAll", aliases=["clear-all"], usage="clearall")
     @commands.cooldown(
         1, 86400, commands.BucketType.user
     )  # So one person can't abuse the feature.
@@ -94,7 +94,9 @@ class AdminCommands:
         await confirm_message.delete()
         await ctx.send(content=f"Deleted {deleted_message} messages")
 
-    @commands.command(usage="stopclearing", aliases=["stopclearing", "stop-clearing"])
+    @commands.command(
+        name="StopClearing", usage="stopclearing", aliases=["stop-clearing"]
+    )
     @commands.cooldown(
         1, 86400, commands.BucketType.channel
     )  # Only allow this to be used once a day in a channel.
@@ -109,7 +111,7 @@ class AdminCommands:
         if ctx.channel.id in self.clearing_channels:
             self.clearing_channels.remove(ctx.channel.id)
 
-    @commands.command(usage="kick [user] (reason)")
+    @commands.command(name="Kick", usage="kick [user] (reason)")
     @commands.has_permissions(kick_members=True)
     async def kick(self, ctx: commands.Context, user: FuzzyUser, reason: str = ""):
         """Kick a user.
@@ -140,13 +142,8 @@ class AdminCommands:
         await ctx.send(f"Kicked {user} for {for_reason}.")
 
     @commands.command(
-        aliases=[
-            "setprefix",
-            "set-prefix",
-            "changeprefix",
-            "change_prefix",
-            "change-prefix",
-        ],
+        name="SetPrefix",
+        aliases=["set-prefix", "changeprefix", "change_prefix", "change-prefix"],
         usage="setprefix [prefix]",
     )
     @commands.has_permissions(manage_channels=True)
@@ -170,7 +167,10 @@ class AdminCommands:
         if prefix is None:
             confirm, message = await confirm_action(
                 ctx,
-                "You may have forgotten the prefix. Do you want to remove the need for a prefix?",
+                (
+                    "You may have forgotten the prefix."
+                    "Do you want to remove the need for a prefix?",
+                ),
             )
             if not confirm:
                 await message.edit(content=no_change_message)
@@ -184,21 +184,30 @@ class AdminCommands:
             r"(<@(?:!?|&|#)\d+>)"
         )  # Checks if the string has a user or role mention or a channel "reference".
         references = re.findall(has_reference, prefix)
-        if references is not None or "@everyone" in prefix or "@here" in prefix:
+        if references not in ([], None) or "@everyone" in prefix or "@here" in prefix:
             # References have a zero width joiner to doubly prevent mentions
             raw_bot_mention = f"<@{ctx.bot.user.id}>"
             bot_mention = ctx.bot.user.mention
             if prefix == raw_bot_mention:
                 await ctx.send(
-                    f"I already respond to {bot_mention}. No need to set it to the prefix."
+                    (
+                        f"I already respond to {bot_mention}."
+                        "No need to set it to the prefix."
+                    )
                 )
             elif raw_bot_mention in references:
                 await ctx.send(
-                    f"I already respond to {bot_mention}, adding extra characters just makes it confusing."
+                    (
+                        f"I already respond to {bot_mention},"
+                        "adding extra characters just makes it confusing."
+                    )
                 )
             else:
                 await ctx.send(
-                    f'You can\'t include "references" such as @user, #‍channel, @‍everyone, or @‍here in your prefix, sorry.'
+                    (
+                        'You can\'t include "references" such as @user, #‍channel,'
+                        "@‍everyone, or @‍here in your prefix, sorry."
+                    )
                 )
             return
 
@@ -217,7 +226,10 @@ class AdminCommands:
         elif len(prefix) > 10:
             confirm, message = await confirm_action(
                 ctx,
-                f'Your prefix is pretty long. Are you sure you want to set it to "{prefix}"?',
+                (
+                    "Your prefix is pretty long."
+                    f'Are you sure you want to set it to "{prefix}"?'
+                ),
             )
             if not confirm:
                 await message.edit(content=no_change_message)
@@ -225,7 +237,10 @@ class AdminCommands:
 
         if "'" in prefix_casefold or '"' in prefix_casefold:
             await ctx.send(
-                f"Quotes can mess with how I parses arguments, so you can't use quotes in your prefix, sorry!"
+                (
+                    "Quotes can mess with how I parses arguments,"
+                    "so you can't use quotes in your prefix, sorry!"
+                )
             )
             return
 
@@ -233,7 +248,11 @@ class AdminCommands:
         if any(character in prefix_casefold for character in markdown):
             confirm, message = await confirm_action(
                 ctx,
-                f'Markdown can be annoying! Are you sure you want to set the prefix to "{prefix}"? It may format stuff in unexpected ways.',
+                (
+                    "Markdown can be annoying!"
+                    f'Are you sure you want to set the prefix to "{prefix}"?'
+                    "It may format stuff in unexpected ways.",
+                ),
             )
             if not confirm:
                 await message.edit(content=no_change_message)
@@ -255,9 +274,9 @@ class AdminCommands:
         else:
             await ctx.send(prefix_set)
 
-    # @commands.command(usage="load [cog]")
+    # @commands.command(name="Load", usage="load [cog]")
     # async def load(ctx, )
 
 
-def setup(bot, database):
-    bot.add_cog(AdminCommands(database))
+def setup(bot):
+    bot.add_cog(AdminCommands())

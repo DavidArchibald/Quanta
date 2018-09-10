@@ -1,20 +1,18 @@
 #!/usr/bin/env python3
 
-import asyncio
-
 import discord
 from discord.ext import commands
 
-import fuzzywuzzy
 from fuzzywuzzy import process
 
 import itertools
-from ..constants import emojis
 
-from . import helper_functions
+from ..globals import emojis
+from ..globals.custom_types import DiscordUser
+
 from .helper_functions import wait_for_reactions
 
-from typing import Union, Tuple, Optional
+from typing import Tuple, Optional
 
 
 class FuzzyUser(commands.Converter):
@@ -32,14 +30,12 @@ class FuzzyUser(commands.Converter):
         ctx: commands.Context,
         identifier: str,
         base_message: discord.Message = None,
-    ) -> Tuple[
-        Optional[Union[discord.User, discord.Member, str]], Optional[discord.Message]
-    ]:
+    ) -> Tuple[Optional[DiscordUser], Optional[discord.Message]]:
         result_count = 3  # Trim the results to be 3
         # This will only support up to 10 results.
         # A possible fix would be "pages"
 
-        if identifier == None or identifier == "":
+        if identifier is None or identifier == "":
             return (identifier, None)
 
         # Handle escaped usernames
@@ -54,7 +50,7 @@ class FuzzyUser(commands.Converter):
             # 3. Username
             user = await commands.UserConverter().convert(ctx, identifier)
             return (user, None)
-        except:
+        except:  # noqa: E722
             # Ignore any error it gives out.
             # This is only for efficiency.
             pass
@@ -112,10 +108,10 @@ class FuzzyUser(commands.Converter):
     @staticmethod
     async def handle_no_user(
         ctx: commands.Context,
-        user: Union[discord.User, discord.Member, str],
+        user: DiscordUser,
         message: discord.Message,
         no_user_message: str = None,
-    ) -> Union[discord.User, discord.Member]:
+    ) -> DiscordUser:
         if isinstance(user, str):
             no_user_message = no_user_message or f'Couldn\'t find the user "{user}".'
             if message is None:
@@ -129,13 +125,21 @@ class FuzzyUser(commands.Converter):
 
 class GetUser:
     @commands.command(
+        name="GetUser",
         usage="getuser [user]",
-        aliases=["getuser", "get-user", "get_member", "getmember", "get-member"],
+        aliases=["get-user", "get_member", "getmember", "get-member"],
     )
     async def get_user(self, ctx: commands.Context, fuzzy_user: FuzzyUser):
+        """Gets a user using a member string and fuzzy checking.
+
+        Arguments:
+            ctx {commands.Context} -- Information about where a command was run.
+            fuzzy_user {FuzzyUser} -- Gets a user using a string with a user's name.
+        """
+
         user, message = fuzzy_user
         response = await FuzzyUser.handle_no_user(ctx, user, message)
-        if response == None:
+        if response is None:
             return
 
         content = user.mention
@@ -145,5 +149,5 @@ class GetUser:
             await message.edit(content=content, embed=None)
 
 
-def setup(bot: commands.Bot, database):
+def setup(bot: commands.Bot):
     bot.add_cog(GetUser())

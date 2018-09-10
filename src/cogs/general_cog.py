@@ -3,30 +3,33 @@
 import discord
 from discord.ext import commands
 
-import asyncio
 import aiohttp
-
-import binascii
-import base64
-import json
+import urllib
 
 import datetime
-import humanize
 
-import inspect
+from fuzzywuzzy import process
+
+import humanize
+import itertools
+
+import html
+import json
+import yaml
+import xml.etree.cElementTree
 
 import re
 import textwrap
 
 import random
 
-import html
 import copy
+import os
 
-from ..constants import emojis, latency, uptime
-from ..helpers import helper_functions, session_helper
-from ..helpers.helper_functions import wait_for_reactions
-from ..helpers.database_helper import Database
+from ..globals import emojis, latency, uptime
+
+from ..helpers import session_helper
+from ..helpers.helper_functions import wait_for_reactions, confirm_action
 
 
 class GeneralCommands:
@@ -34,10 +37,15 @@ class GeneralCommands:
 
     icon = "<:quantaperson:473983023797370880>"
 
-    def __init__(self, database: Database) -> None:
-        self.database: Database = database
+    def __init__(self) -> None:
+        config_path = os.path.join(os.path.dirname(__file__), "../secrets/config.yaml")
+        with open(config_path, "r") as config_file:
+            config = yaml.safe_load(config_file)
 
-    @commands.command(usage="ping")
+        wolfram_alpha = config["wolfram_alpha"]
+        self.app_id = wolfram_alpha["app_id"]
+
+    @commands.command(name="Ping", usage="ping")
     async def ping(self, ctx, round_to=4):
         """Returns the bot latency.
 
@@ -45,7 +53,7 @@ class GeneralCommands:
             ctx {commands.Context} -- Information about where a command was run.
 
         Keyword Arguments:
-            round_to {int} -- How many digits to round the bot latency to. (default: {4})
+            round_to {int} -- How many digits to round the bot latency. (default: {4})
         """
 
         # Check digits is a string then casefold
@@ -66,18 +74,20 @@ class GeneralCommands:
         if message is not None:
             await ctx.send(message)
 
-    @commands.command(aliases=["commands"], usage="help (command)")
-    async def help(self, ctx, command=None):
+    @commands.command(
+        name="Help", aliases=["commands", "command"], usage="help (command)"
+    )
+    async def help(self, ctx, *, command_name=None):
         """Show a complete list of commands you can use. Or information about a specific one.
 
         Arguments:
             ctx {commands.Context} -- Information about where a command was run.
-            command -- a command to get specific help about. (default: {None})
+            command_name {str} -- A command to get specific help. (default: {None})
         """
-        if command is None:
+        if command_name is None:
             embed = discord.Embed(
                 title="<:quantabadge:473675013786959891> **Help**",
-                color=0xf1c40f,  # gold
+                color=0x551a8b,  # silver
                 description=textwrap.dedent(
                     """
                     Quanta is a multipurpose bot for simplifying your life.
@@ -97,7 +107,7 @@ class GeneralCommands:
                         if cog_command.usage is not None
                         else cog_command.name
                     )
-                    if cog_command.hidden == True:
+                    if cog_command.hidden is True:
                         continue
                     description += f"**{command_usage}**\n"
                 if description:
@@ -108,20 +118,105 @@ class GeneralCommands:
 
             embed.add_field(
                 name="\u200B",
-                value=textwrap.dedent(
-                    f"""**Commands are written in the format command [required] (optional)**
-
-                    To see more information about a specific command use {ctx.prefix}help (command)
-                    """
+                value=(
+                    "**Commands are written in the format"
+                    "command [required] (optional)**\n\n"
+                    f"To see more information about a specific command use {ctx.prefix}"
+                    "help (command)"
                 ),
             )
         else:
-            print(dir(ctx))
+            command = ctx.bot.get_command(command_name)
+
+            if command is None:
+                all_command_names = list(
+                    itertools.chain(
+                        *[
+                            [*command.aliases, command.name]
+                            for command in ctx.bot.commands
+                            if command.hidden is not True
+                        ]
+                    )
+                )
+                closest_command_name, closest_ratio = process.extractOne(
+                    command_name, all_command_names
+                )
+                could_not_find = (
+                    "I couldn't find that command, sorry!"
+                    f"Check {ctx.prefix}help for a list of the commands I have."
+                )
+                if closest_ratio < 80:
+                    await ctx.send(could_not_find)
+                    return
+                else:
+                    confirm, message = await confirm_action(
+                        ctx, f"Do you mean my command {closest_command_name}?"
+                    )
+                    if not confirm:
+                        await message.edit(content=could_not_find)
+                        return
+
+                    await message.edit(
+                        content=(
+                            "Here's the information about my command"
+                            f"{closest_command_name}."
+                        )
+                    )
+                    command_name = closest_command_name
+                    command = ctx.bot.get_command(closest_command_name)
+                    if command is None:
+                        # This shouldn't ever happen.
+                        await message.edit(
+                            content=(
+                                "Something went wrong when getting the command"
+                                f"{closest_command_name}."
+                            )
+                        )
+                        return
+            if command.help is not None:
+                brief = command.help.split("\n")[0]
+            else:
+                brief = "I can't find any help, sorry."
+            embed = discord.Embed(
+                title=f"{command.qualified_name} Help",
+                color=0x551a8b,
+                description=brief,
+            )
+            embed.add_field(name="Usage", value=command.usage)
+            embed.add_field(
+                name="Aliases",
+                value=", ".join([command.name.lower(), *command.aliases]),
+                inline=True,
+            )
+
+            if isinstance(command, commands.Group):
+                group = command
+                subcommands_description = ""
+                nesting_characters = ["-", "*"]
+                for command in group.walk_commands():
+                    nesting_count = len(command.full_parent_name.split(" "))
+                    nesting_character = nesting_characters[
+                        nesting_count % len(nesting_characters) - 1
+                    ]
+                    tabs = "\t" * (nesting_count - 1) + nesting_character
+
+                    subcommands_description += (
+                        f"{tabs} **{command.usage or command.name.lower()}**\n"
+                    )
+                embed.add_field(
+                    name="Subcommands", value=subcommands_description, inline=False
+                )
 
         await ctx.send(embed=embed)
 
-    @commands.command(usage="uptime")
+    @commands.command(name="Uptime", usage="uptime")
     async def uptime(self, ctx: commands.Context):
+        """Says how long the bot has been running.
+
+        Arguments:
+            ctx {commands.Context} -- Information about where a command was run.
+        """
+
         current_time = datetime.datetime.now()
         running_time_delta = current_time - ctx.bot.launch_time
         running_time = humanize.naturaldelta(running_time_delta)
@@ -134,9 +229,15 @@ class GeneralCommands:
         if message is not None:
             await ctx.send(message)
 
-    @commands.command(usage="trivia")
+    @commands.command(name="Trivia", usage="trivia")
     async def trivia(self, ctx: commands.Context):
-        something_went_wrong = f"Sorry, something went wrong with the trivia API."
+        """Sends an answerable trivia question.
+
+        Arguments:
+            ctx {commands.Context} -- Information about where a command was run.
+        """
+
+        something_went_wrong = "Sorry, something went wrong with the trivia API."
         url = "https://opentdb.com/api.php?amount=1"
 
         session = await session_helper.get_session()
@@ -184,7 +285,10 @@ class GeneralCommands:
                 too_slow.clear_fields()
                 too_slow.add_field(
                     name="\u200B",
-                    value=f"Sorry, you ran out of time. The correct answer was {correct_answer}.",
+                    value=(
+                        "Sorry, you ran out of time. The correct answer was"
+                        f"{correct_answer}."
+                    ),
                 )
 
                 reaction = await wait_for_reactions(
@@ -229,6 +333,44 @@ class GeneralCommands:
             await ctx.send(something_went_wrong)
             return
 
+    @commands.command(name="Wolfram", usage="wolfram [query]")
+    async def wolfram(self, ctx: commands.Context, *, query):
+        async with ctx.typing():
+            something_went_wrong = (
+                "Sorry, something went wrong with connecting to Wolfram Alpha."
+            )
 
-def setup(bot: commands.Bot, database):
-    bot.add_cog(GeneralCommands(database))
+            query = urllib.parse.quote(query)
+            query_url = (
+                "http://api.wolframalpha.com/v2/query"
+                f"?appid={self.app_id}"
+                f"&input={query}"
+                # "&includepodid=Result"
+                "&format=plaintext"
+            )
+
+            session = await session_helper.get_session()
+            try:
+                async with session.get(query_url) as response:
+                    text = await response.text()
+                    try:
+                        response_tree = xml.etree.cElementTree.fromstring(text)
+                    except xml.etree.ElementTree.ParseError as exception:
+                        await ctx.send(something_went_wrong)
+                        return
+
+                    for pod in response_tree:
+                        print(pod)
+                    # import pprint
+                    # print(pprint.pprint(text))
+                    # print(response_tree[0])
+                    # result_pod = ...
+            except aiohttp.ClientError:
+                await ctx.send(something_went_wrong)
+                return
+
+            # await ctx.send(plaintext_result)
+
+
+def setup(bot: commands.Bot):
+    bot.add_cog(GeneralCommands())

@@ -4,12 +4,9 @@ import signal
 import sys
 from threading import Lock
 
-import discord
 from discord.ext import commands
 
 from typing import Optional
-
-exit_handler: Optional[ExitHandler] = None
 
 
 class ExitHandler:
@@ -30,7 +27,7 @@ class ExitHandler:
         self.lock.acquire()
         self.commands_running -= 1
 
-        if self.SIGTERM == True and self.commands_running == 0:
+        if self.SIGTERM is True and self.commands_running == 0:
             self.lock.release()
             await ctx.bot.logout()
             sys.exit(0)
@@ -43,7 +40,7 @@ class ExitHandler:
 
     def signal_terminate_handler(self, signal, frame):
         signal.signal(signal.SIGTERM, self.original_sigterm)
-        if self.SIGTERM == True or self.commands_running == 0:
+        if self.SIGTERM is True or self.commands_running == 0:
             sys.exit(0)
 
         self.lock.acquire()
@@ -53,7 +50,7 @@ class ExitHandler:
 
     def signal_interupt_handler(self, signal, frame):
         signal.signal(signal.SIGINT, self.original_sigint)
-        if self.SIGTERM == True or self.commands_running == 0:
+        if self.SIGTERM is True or self.commands_running == 0:
             sys.exit(0)
 
         self.lock.acquire()
@@ -69,7 +66,7 @@ class ExitHandler:
     def is_terminating(self) -> bool:
         return self.SIGTERM
 
-    def terminate(self):
+    def graceful_terminate(self):
         self.lock.acquire()
         self.SIGTERM = True
         self.lock.release()
@@ -97,3 +94,6 @@ def init(bot) -> ExitHandler:
     bot.add_cog(exit_handler)
 
     return exit_handler
+
+
+exit_handler = None

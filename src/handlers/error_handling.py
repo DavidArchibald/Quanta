@@ -12,7 +12,7 @@ import itertools
 import fuzzywuzzy
 from fuzzywuzzy import process
 
-from ..constants import emojis
+from ..globals import emojis, variables
 from ..helpers import helper_functions
 from ..helpers.helper_functions import wait_for_reactions
 from ..helpers.database_helper import Database
@@ -21,8 +21,8 @@ from ..helpers.database_helper import Database
 class CommandErrorHandler:
     """Handles any errors the bot will throw."""
 
-    def __init__(self, database: Database) -> None:
-        self.database: Database = database
+    def __init__(self) -> None:
+        self.database = variables.database
 
     async def on_command_error(self, ctx: commands.Context, error: BaseException):
         """The event triggered when an error is raised while invoking a command.
@@ -46,9 +46,14 @@ class CommandErrorHandler:
         elif isinstance(error, commands.CommandNotFound):
             all_command_names = list(
                 itertools.chain(
-                    *[[*command.aliases, command.name] for command in ctx.bot.commands]
+                    *[
+                        [*command.aliases, command.name]
+                        for command in ctx.bot.commands
+                        if command.hidden != True
+                    ]
                 )
             )
+
             closest_command_name, closest_ratio = process.extractOne(
                 command_name, all_command_names
             )
@@ -66,21 +71,27 @@ class CommandErrorHandler:
                 reaction = await wait_for_reactions(
                     ctx, message, (emojis.yes, emojis.no), timeout=10
                 )
-                if reaction is None:
+                if reaction is None or reaction.emoji == emojis.no:
                     await message.edit(content=try_help_command)
                 elif reaction.emoji == emojis.yes:
                     await message.edit(
-                        content=f"I'll run the command `{closest_command_name}`` for you :)"
+                        content=f"I'll run the command `{closest_command_name}` for you."
                     )
                     await asyncio.sleep(1)
-                    await message.delete()
                     new_message = ctx.message
-                    _, arguments = new_message.content.split(" ", 1)
+                    try:
+                        arguments = new_message.content.split(" ", 1)[1]
+                    except IndexError:
+                        arguments = None
                     new_message.content = (
                         f"{ctx.prefix}{closest_command_name} {arguments}"
                     )
 
                     await ctx.bot.process_commands(new_message)
+        elif isinstance(error, commands.MissingRequiredArgument):
+            await ctx.send(
+                f"You seem to have missed a required argument, check {ctx.prefix}help {command_name} for information about how to use it."
+            )
         elif isinstance(error, commands.DisabledCommand):
             is_owner = await ctx.bot.is_owner(ctx.message.author)
             if is_owner == True:
@@ -105,5 +116,5 @@ class CommandErrorHandler:
             )
 
 
-def setup(bot: commands.Bot, database):
-    bot.add_cog(CommandErrorHandler(database))
+def setup(bot: commands.Bot):
+    bot.add_cog(CommandErrorHandler())

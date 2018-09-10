@@ -5,28 +5,32 @@ import asyncio
 import discord
 from discord.ext import commands
 
-import operator
-import re
-import importlib
+from typing import Union, List, Tuple
 
-from typing import Union, Mapping
+from ..globals import emojis
+from ..globals.custom_types import DiscordReaction
+from .embed_builder import EmbedBuilder
 
-from ..constants import emojis
-from .bot_states import BotStates
 
-states = BotStates()
+build_embed = EmbedBuilder()
 
 
 class HelperCommands:
     # Helper Commands is currently exposed for testing purposes.
-    @commands.command(usage="error [error]")
+    @commands.command(name="Error", usage="error [error]")
     async def error(self, ctx: commands.Context):
+        """Simulates error catching for testing.
+
+        Arguments:
+            ctx {commands.Context} -- Information about where a command was run.
+        """
+
         try:
             1 / 0
         except ZeroDivisionError as exception:
-            await states.error(ctx, exception)
+            await build_embed.error(ctx, exception)
 
-    @commands.command(usage="wait [time]")
+    @commands.command(name="Wait", usage="wait [time]")
     @commands.is_owner()
     async def wait(self, ctx: commands.Context, time: int = 1):
         """Waits for a while. Mostly for testing .kill
@@ -47,7 +51,7 @@ class HelperCommands:
         await message.remove_reaction(emojis.loading, ctx.bot.user)
         await message.add_reaction(emojis.yes)
 
-    @commands.command(usage="unusable")
+    @commands.command(name="Unusable", usage="unusable")
     @commands.check(lambda _: False)
     async def unusable(self, ctx: commands.Context):
         """Used for testing the Sudo command or owner overrides... or commands.check glitches
@@ -57,15 +61,37 @@ class HelperCommands:
         """
         is_owner = await ctx.bot.is_owner(ctx.message.author)
 
-        if is_owner == True:
+        if is_owner is True:
             await ctx.send("Hey owner!")
         else:
             await ctx.send("This is supposed to be unusable... How're you using this?")
 
+    @commands.group()
+    async def lorem(self, ctx: commands.Context):
+        ...
+
+    @lorem.group()
+    async def ipsum(self, ctx: commands.Context):
+        ...
+
+    @ipsum.group()
+    async def dolor(self, ctx: commands.Context):
+        ...
+
+    @dolor.group()
+    async def sit(self, ctx: commands.Context):
+        ...
+
+    @sit.command()
+    async def amet(self, ctx: commands.Context):
+        ...
+
 
 async def confirm_action(
     ctx: commands.Context,
-    message: Union[str, discord.Embed, Mapping[str, discord.Embed]] = "Are you sure?",
+    message: Union[
+        str, discord.Embed, Tuple[str, discord.Embed], List
+    ] = "Are you sure?",
     base_message: discord.Message = None,
     timeout: float = 60.0,
 ) -> tuple:
@@ -80,10 +106,10 @@ async def confirm_action(
         timeout {float} -- How long to wait until canceling. (default: {60.0})
 
     Returns:
-        (bool, commands.Message) -- The confirmation boolean and the message used to ask.
+        (bool, commands.Message) -- The result and the message used to ask confirmation.
     """
     embed = None
-    if isinstance(message, iter):
+    if isinstance(message, (list, tuple)):
         embed = message[1]
         message = message[0]
 
@@ -106,10 +132,10 @@ async def confirm_action(
 async def wait_for_reactions(
     ctx: commands.Context,
     message: discord.Message,
-    reactions: Union[discord.Reaction, discord.Emoji, discord.PartialEmoji, str],
-    timeout: int = 60.0,
+    reactions: Union[List[DiscordReaction], Tuple],
+    timeout: Union[int, float] = 60.0,
     timeout_message: Union[
-        str, discord.Embed, Mapping[str, discord.Embed]
+        str, discord.Embed, Tuple[str, discord.Embed], List
     ] = "Timed out!",
     remove_reactions: bool = True,
     remove_reactions_on_timeout: bool = None,
@@ -117,16 +143,17 @@ async def wait_for_reactions(
     if remove_reactions_on_timeout is None:
         remove_reactions_on_timeout = remove_reactions
 
-    if isinstance(timeout_message, iter):
-        pass
+    content = None
+    embed = None
+    if isinstance(timeout_message, (list, tuple)):
+        content, embed = timeout_message
+    elif isinstance(timeout_message, discord.Embed):
+        embed = timeout_message
+    else:
+        content = timeout_message
 
-    for reaction in list(reactions):
-        try:
-            await message.add_reaction(reaction)
-        except (discord.NotFound, discord.InvalidArgument):
-            reactions.remove(reaction)
-        except discord.HTTPException:
-            return
+    for reaction in reactions:
+        await message.add_reaction(reaction)
 
     while True:
         try:
@@ -136,8 +163,8 @@ async def wait_for_reactions(
                 check=lambda reaction, _: reaction.message.id == message.id,
             )
         except asyncio.TimeoutError:
-            await message.edit(content=timeout_message)
-            if remove_reactions_on_timeout == True:
+            await message.edit(content=content, embed=embed)
+            if remove_reactions_on_timeout is True:
                 try:
                     await message.clear_reactions()
                 except discord.HTTPException:
@@ -151,13 +178,13 @@ async def wait_for_reactions(
         if user == ctx.message.author and reaction.emoji in reactions:
             break
 
-        if remove_reactions == True:
+        if remove_reactions is True:
             try:
                 await message.remove_reaction(reaction, user)
             except (discord.HTTPException, discord.InvalidArgument):
                 pass
 
-    if remove_reactions == True:
+    if remove_reactions is True:
         try:
             await message.clear_reactions()
         except discord.HTTPException:
@@ -175,5 +202,5 @@ def escape_markdown(text: str) -> str:
     return text
 
 
-def setup(bot: commands.bot, database):
+def setup(bot: commands.Bot):
     bot.add_cog(HelperCommands())
