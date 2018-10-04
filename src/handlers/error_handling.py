@@ -8,14 +8,11 @@ import sys
 import traceback
 
 import itertools
-
-import fuzzywuzzy
 from fuzzywuzzy import process
 
+
 from ..globals import emojis, variables
-from ..helpers import helper_functions
 from ..helpers.helper_functions import wait_for_reactions
-from ..helpers.database_helper import Database
 
 
 class CommandErrorHandler:
@@ -39,7 +36,7 @@ class CommandErrorHandler:
         command_name = ctx.invoked_with
         if isinstance(error, commands.CheckFailure):
             is_owner = await ctx.bot.is_owner(ctx.message.author)
-            if is_owner == True:
+            if is_owner is True:
                 await ctx.command.reinvoke(ctx)
             else:
                 await ctx.send(f"You can't use the command `{command_name}`, sorry!")
@@ -49,7 +46,7 @@ class CommandErrorHandler:
                     *[
                         [*command.aliases, command.name]
                         for command in ctx.bot.commands
-                        if command.hidden != True
+                        if command.hidden is not True
                     ]
                 )
             )
@@ -75,7 +72,9 @@ class CommandErrorHandler:
                     await message.edit(content=try_help_command)
                 elif reaction.emoji == emojis.yes:
                     await message.edit(
-                        content=f"I'll run the command `{closest_command_name}` for you."
+                        content=(
+                            f"I'll run the command `{closest_command_name}` for you."
+                        )
                     )
                     await asyncio.sleep(1)
                     new_message = ctx.message
@@ -90,11 +89,15 @@ class CommandErrorHandler:
                     await ctx.bot.process_commands(new_message)
         elif isinstance(error, commands.MissingRequiredArgument):
             await ctx.send(
-                f"You seem to have missed a required argument, check {ctx.prefix}help {command_name} for information about how to use it."
+                (
+                    "You seem to have missed a required argument,"
+                    f"check {ctx.prefix}help {command_name}"
+                    "for information about how to use it."
+                )
             )
         elif isinstance(error, commands.DisabledCommand):
             is_owner = await ctx.bot.is_owner(ctx.message.author)
-            if is_owner == True:
+            if is_owner is True:
                 await ctx.command.reinvoke(ctx)
             else:
                 await ctx.send(f"The command `{command_name}` has been disabled.")

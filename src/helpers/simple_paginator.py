@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
-"""Code by Myst(EvieePy) modified from https://github.com/EvieePy/EvieeBot/blob/2cbf85c98c77776e1f52b4f4f92aa51ddfe4d4ec/utils/paginators.py#L36-L163
-"""
+"""Code by Myst(EvieePy)"""
 
 import asyncio
 import discord

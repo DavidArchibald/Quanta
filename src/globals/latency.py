@@ -10,7 +10,7 @@ fast_latency = [
             "I guess that means I just broke the world record for fastest table tennis "
             "smash speed!"
         )
-        if latency < 0.0876853425
+        if latency < 0.087_685_342_5
         else "Oh we're not actually playing table tennis are we..."
     ),
     lambda latency: f"Hmm I have a latency of {latency}, "
@@ -21,17 +21,15 @@ fast_latency = [
         "I shouldn't expect to be able to be good at everything."
     ),
     lambda latency: (
-        f"I bet it didn't actually seem like it took me {latency} seconds to respond"
+        f"I bet it didn't actually seem like it took me {latency} seconds to respond "
         "because websockets delays may make it longer... but I did!"
     ),
     lambda latency: (
-        f"{latency} seconds ago you requested me to send this message,"
+        f"{latency} seconds ago you requested me to send this message, "
         "and here it is now."
     ),
     lambda latency: f"It took me {latency} seconds to respond"
-    + ", literally faster than you can blink!"
-    if latency < 0.3
-    else ".",
+    + (", literally faster than you can blink!" if latency < 0.3 else "."),
 ]
 
 slow_latency = [
@@ -39,7 +37,7 @@ slow_latency = [
         f"{emojis.cog} I seem to be taking a while—"
         f"{latency} seconds, to be exact to respond, sorry!"
     ),
-    lambda latency: f"It's took me {latency} seconds long to respond... sorry!",
+    lambda latency: f"It took me {latency} seconds long to respond... sorry!",
     lambda latency: (
         f"I guess I must be popular if it's taking me {latency} seconds to respond."
     ),

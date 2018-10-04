@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
-"""Code by Shang Wang(epicshane) from the gist https://gist.github.com/epicshane/032c25c78fbe6d20607a28c1a1930761#file-cachenode_freqnode-py
-"""
+"""Code by Shang Wang(epicshane)"""
 
 from typing import Dict
 

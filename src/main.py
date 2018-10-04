@@ -9,27 +9,16 @@ from discord.ext import commands
 import discord.utils
 
 import os
-import sys
-import signal
 
 import re
-
-import traceback
-import logging
-import importlib
 import yaml
 
-from typing import List, Any
+from typing import List
 
 from .helpers import database_helper, logs_helper
 from .handlers import exit_handling
 
 from .globals import variables
-
-
-def foo():
-    unused_variable = True
-
 
 exit_handler = None
 
@@ -50,7 +39,8 @@ class fake_ctx(object):
 
 
 async def get_prefix_wrapper(bot: commands.Bot, message: discord.Message) -> List[str]:
-    # I have to fake `commands.Context` because `get_context` requires the prefix, which creates an infinite loop.
+    # I have to fake `commands.Context` because `get_context` requires the prefix,
+    # which creates an infinite loop.
     ctx: fake_ctx = fake_ctx()
     ctx.message = message
     prefix = await database.get_prefix(ctx)
@@ -64,7 +54,7 @@ database = database_helper.Database()
 @bot.event
 async def on_message(message: discord.Message):
     if (
-        variables.is_ready == True
+        variables.is_ready is True
         and exit_handler is not None
         and not exit_handler.is_terminating()
     ):

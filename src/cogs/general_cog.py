@@ -87,7 +87,7 @@ class GeneralCommands:
         if command_name is None:
             embed = discord.Embed(
                 title="<:quantabadge:473675013786959891> **Help**",
-                color=0x551a8b,  # silver
+                color=0x551A8B,  # silver
                 description=textwrap.dedent(
                     """
                     Quanta is a multipurpose bot for simplifying your life.
@@ -179,7 +179,7 @@ class GeneralCommands:
                 brief = "I can't find any help, sorry."
             embed = discord.Embed(
                 title=f"{command.qualified_name} Help",
-                color=0x551a8b,
+                color=0x551A8B,
                 description=brief,
             )
             embed.add_field(name="Usage", value=command.usage)
@@ -236,102 +236,104 @@ class GeneralCommands:
         Arguments:
             ctx {commands.Context} -- Information about where a command was run.
         """
+        trivia = None
+        async with ctx.typing():
+            await ctx.message.add_reaction(emojis.loading)
 
-        something_went_wrong = "Sorry, something went wrong with the trivia API."
-        url = "https://opentdb.com/api.php?amount=1"
+            something_went_wrong = "Sorry, something went wrong with the trivia API."
+            url = "https://opentdb.com/api.php?amount=1"
 
-        session = await session_helper.get_session()
+            session = await session_helper.get_session()
+            try:
+                async with session.get(url) as response:
+                    if response.status != 200:
+                        await ctx.send(something_went_wrong)
+                        return
+                    try:
+                        trivia = json.loads(await response.text())["results"][0]
+                    except (json.decoder.JSONDecodeError, TypeError, IndexError):
+                        await ctx.send(something_went_wrong)
+            except aiohttp.ClientError:
+                await ctx.send(something_went_wrong)
+                return
+
         try:
-            async with session.get(url) as response:
-                if response.status != 200:
-                    await ctx.send(something_went_wrong)
-                    return
+            category = html.unescape(trivia["category"])
+            question = html.unescape(trivia["question"])
+            question_type = html.unescape(trivia["type"])
+            correct_answer = html.unescape(trivia["correct_answer"])
+            incorrect_answers = [
+                html.unescape(item) for item in trivia["incorrect_answers"]
+            ]
 
-                try:
-                    trivia = json.loads(await response.text())["results"][0]
-
-                    category = html.unescape(trivia["category"])
-                    question = html.unescape(trivia["question"])
-                    question_type = html.unescape(trivia["type"])
-                    correct_answer = html.unescape(trivia["correct_answer"])
-                    incorrect_answers = [
-                        html.unescape(item) for item in trivia["incorrect_answers"]
-                    ]
-
-                    if question_type == "boolean":
-                        answers = ["True", "False"]
-                    else:
-                        answers = [correct_answer, *incorrect_answers]
-                        random.shuffle(answers)
-                except (json.decoder.JSONDecodeError, KeyError, IndexError, ValueError):
-                    await ctx.send(something_went_wrong)
-                    return
-
-                formatted_answers = [
-                    f"{index + 1}. {answer}" for index, answer in enumerate(answers)
-                ]
-
-                unchecked_answers = [
-                    f"{emojis.radio_off} {answer}" for answer in formatted_answers
-                ]
-
-                embed = discord.Embed(title=category, description=f"{question}")
-                embed.add_field(name="\u200B", value="\n".join(unchecked_answers))
-
-                message = await ctx.send(embed=embed)
-                number_emojis = emojis.number_emojis[1 : len(answers) + 1]
-
-                too_slow = copy.copy(embed)
-                too_slow.clear_fields()
-                too_slow.add_field(
-                    name="\u200B",
-                    value=(
-                        "Sorry, you ran out of time. The correct answer was"
-                        f"{correct_answer}."
-                    ),
-                )
-
-                reaction = await wait_for_reactions(
-                    ctx,
-                    message,
-                    number_emojis,
-                    timeout=1,
-                    timeout_message=too_slow,
-                    remove_reactions=False,
-                    remove_reactions_on_timeout=True,
-                )
-                if reaction is None:
-                    return
-
-                chosen_number = number_emojis.index(reaction.emoji)
-                correct_number = answers.index(correct_answer)
-                correct_emoji = number_emojis[correct_number]
-
-                chosen_answers = copy.copy(formatted_answers)
-
-                if reaction.emoji == correct_emoji:
-                    chosen_answers[
-                        chosen_number
-                    ] = f"{emojis.circle_x} {formatted_answers[chosen_number]}"
-                    embed.colour = 0x00ff00
-                    embed.set_field_at(
-                        0, name="\u200B", value="\n".join(formatted_answers)
-                    )
-                else:
-                    formatted_answers[
-                        correct_number
-                    ] = f"{emojis.circle_check} {formatted_answers[correct_number]}"
-
-                    embed.colour = 0xff0000
-                    embed.set_field_at(
-                        0, name="\u200B", value="\n".join(formatted_answers)
-                    )
-
-                await message.edit(embed=embed)
-
-        except aiohttp.ClientError:
+            if question_type == "boolean":
+                answers = ["True", "False"]
+            else:
+                answers = [correct_answer, *incorrect_answers]
+                random.shuffle(answers)
+        except (KeyError, ValueError):
             await ctx.send(something_went_wrong)
             return
+
+        await ctx.message.remove_reaction(emojis.loading, ctx.bot.user)
+
+        blank_answers = [
+            f"{index + 1}. {answer}" for index, answer in enumerate(answers)
+        ]
+
+        unchecked_answers = [f"{emojis.radio_off} {answer}" for answer in blank_answers]
+
+        embed = discord.Embed(title=category, description=f"{question}")
+        embed.add_field(name="\u200B", value="\n".join(unchecked_answers))
+
+        message = await ctx.send(embed=embed)
+        number_emojis = emojis.number_emojis[1 : len(answers) + 1]
+
+        too_slow = copy.copy(embed)
+        too_slow.clear_fields()
+        too_slow.add_field(
+            name="\u200B",
+            value=(
+                "Sorry, you ran out of time. The correct answer was "
+                f"{correct_answer}."
+            ),
+        )
+
+        reaction = await wait_for_reactions(
+            ctx,
+            message,
+            number_emojis,
+            timeout=60,
+            timeout_message=too_slow,
+            remove_reactions=False,
+            remove_reactions_on_timeout=True,
+        )
+        if reaction is None:
+            return
+
+        chosen_number = number_emojis.index(reaction.emoji)
+        correct_number = answers.index(correct_answer)
+        correct_emoji = number_emojis[correct_number]
+
+        blank_answers = copy.copy(blank_answers)
+
+        final_answers = copy.copy(blank_answers)
+        for index, answer in enumerate(final_answers):
+            if index == correct_number:
+                final_answers[index] = f"{emojis.circle_check} {final_answers[index]}"
+                continue
+            if index == chosen_number:
+                final_answers[index] = f"{emojis.circle_x} {final_answers[index]}"
+            else:
+                final_answers[index] = f"{emojis.radio_off} {final_answers[index]}"
+        embed.set_field_at(0, name="\u200B", value="\n".join(final_answers))
+
+        if reaction.emoji == correct_emoji:
+            embed.colour = 0x00FF00
+        else:
+            embed.colour = 0xFF0000
+
+        await message.edit(embed=embed)
 
     @commands.command(name="Wolfram", usage="wolfram [query]")
     async def wolfram(self, ctx: commands.Context, *, query):

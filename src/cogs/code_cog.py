@@ -68,7 +68,7 @@ class CodeCommands:
             if ctx.invoked_with.startswith("caesar")
             else f"Rot{original_degree} Cipher",
             description=f"**{rotated_message}**",
-            colour=0x00ff00,
+            colour=0x00FF00,
         )
         embed.set_footer(text=f"Original Message: {message}")
 
@@ -76,7 +76,7 @@ class CodeCommands:
 
     def get_embed(self, message, cipher, cipher_name=""):
         embed = discord.Embed(
-            title=f"{cipher_name} Cipher", description=f"**{cipher}**", colour=0x00ff00
+            title=f"{cipher_name} Cipher", description=f"**{cipher}**", colour=0x00FF00
         )
         embed.set_footer(text=f"Original Message: {message}")
         return embed

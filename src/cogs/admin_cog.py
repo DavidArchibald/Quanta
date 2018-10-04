@@ -260,6 +260,13 @@ class AdminCommands:
 
         try:
             await self.database.set_prefix(ctx, prefix)
+        except RuntimeError:
+            no_database = "The prefix cannot be set without a connected database."
+            if message is not None:
+                await message.edit(content=no_database)
+            else:
+                await ctx.send(no_database)
+            return
         except Exception:
             unexpected_exception = "An unexpected Exception occurred."
             if message is not None:
