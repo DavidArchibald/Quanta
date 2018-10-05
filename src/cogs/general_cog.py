@@ -361,12 +361,17 @@ class GeneralCommands:
                         await ctx.send(something_went_wrong)
                         return
 
+                    result = None
                     for pod in response_tree:
                         print(pod)
+                        if pod.id == "result":
+                            result = pod
+                        # print(pod)
                     # import pprint
                     # print(pprint.pprint(text))
                     # print(response_tree[0])
                     # result_pod = ...
+                    print(result)
             except aiohttp.ClientError:
                 await ctx.send(something_went_wrong)
                 return

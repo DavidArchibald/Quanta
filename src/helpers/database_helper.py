@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import discord
 from discord.ext import commands
 
 import asyncio
@@ -88,15 +89,19 @@ class Database:
         # because it doesn't have the `with_connection` decorator
         if self._pool is None:
             return "?"
-        channel = ctx.message.channel
-        guild_id = str(channel.guild.id)
 
-        prefix = self.cache.get(guild_id)
+        channel = ctx.message.channel
+        if isinstance(channel, discord.abc.PrivateChannel):
+            identifier = str(channel.id)
+        elif isinstance(channel, discord.abc.GuildChannel):
+            identifier = str(channel.guild.id)
+
+        prefix = self.cache.get(identifier)
         if prefix == -1:
             # Calling this directly won't cache it.
-            prefix = await self._get_prefix(guild_id)
+            prefix = await self._get_prefix(identifier)
 
-            self.cache.set(guild_id, prefix)
+            self.cache.set(identifier, prefix)
 
         return prefix
 
@@ -105,20 +110,20 @@ class Database:
 
     @with_connection()
     async def _get_prefix(
-        self, guild_id: int, connection: Optional[asyncpg.Connection] = None
+        self, identifier: int, connection: Optional[asyncpg.Connection] = None
     ) -> str:
         if connection is None:
             return "?"
 
         row = await connection.fetchrow(
-            "SELECT prefix FROM prefixes WHERE serverId=$1", guild_id
+            "SELECT prefix FROM prefixes WHERE identifier=$1", identifier
         )
 
         if row is None:
             async with connection.transaction():
                 # Default prefix is "?"
                 await connection.execute(
-                    "INSERT INTO prefixes VALUES ($1, $2)", guild_id, "?"
+                    "INSERT INTO prefixes VALUES ($1, $2)", identifier, "?"
                 )
 
             return "?"
@@ -147,15 +152,19 @@ class Database:
         if not isinstance(prefix, str):
             prefix = str(prefix)
 
-        guild_id = str(ctx.message.guild.id)
+        channel = ctx.message.channel
+        if isinstance(channel, discord.abc.PrivateChannel):
+            identifier = str(channel.id)
+        elif isinstance(channel, discord.abc.GuildChannel):
+            identifier = str(channel.guild.id)
 
         async with connection.transaction():
             await connection.execute(
-                "UPDATE prefixes SET prefix=$1 WHERE prefixes.serverId=$2",
+                "UPDATE prefixes SET prefix=$1 WHERE prefixes.identifier=$2",
                 prefix,
-                guild_id,
+                identifier,
             )
-            self.cache.set(guild_id, prefix)
+            self.cache.set(identifier, prefix)
 
     def is_connected(self) -> bool:
         """Returns if the database is connected or not.

@@ -2,23 +2,21 @@
 
 """A Discord.py bot."""
 
-import asyncio
+import os
+from typing import List
 
 import discord
 from discord.ext import commands
 import discord.utils
-
-import os
-
-import re
 import yaml
 
-from typing import List
-
-from .helpers import database_helper, logs_helper
-from .handlers import exit_handling
-
 from .globals import variables
+from .handlers import exit_handling
+from .helpers import database_helper, logs_helper
+
+import asyncio
+import re
+
 
 exit_handler = None
 
@@ -40,11 +38,19 @@ class fake_ctx(object):
 
 async def get_prefix_wrapper(bot: commands.Bot, message: discord.Message) -> List[str]:
     # I have to fake `commands.Context` because `get_context` requires the prefix,
-    # which creates an infinite loop.
+    # which would call this and create an infinite loop.
     ctx: fake_ctx = fake_ctx()
     ctx.message = message
-    prefix = await database.get_prefix(ctx)
-    return commands.when_mentioned_or(prefix)(bot, message)
+    prefixes = await database.get_prefix(ctx)
+    if not isinstance(prefixes, tuple):
+        prefixes = tuple(prefixes)
+    if (
+        isinstance(ctx.message.channel, discord.abc.PrivateChannel)
+        and "" not in prefixes
+    ):
+        # This enables the use of no prefix by default.
+        prefixes = (*prefixes, "")
+    return commands.when_mentioned_or(*prefixes)(bot, message)
 
 
 bot = commands.Bot(case_insensitive=True, command_prefix=get_prefix_wrapper)
@@ -59,8 +65,10 @@ async def on_message(message: discord.Message):
         and not exit_handler.is_terminating()
     ):
         prefixes = await get_prefix_wrapper(bot, message)
+        if not isinstance(prefixes, tuple):
+            prefixes = tuple(prefixes)
         to_rot_command = re.compile("(.?(rotate|rot)(?! ))")
-        if message.content.startswith(tuple(prefixes)):
+        if message.content.startswith(prefixes):
             # Add a space between rot or rotate and it's degree.
             message.content = re.sub(
                 to_rot_command, lambda match: match.group(0) + " ", message.content

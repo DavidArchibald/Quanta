@@ -33,14 +33,22 @@ class CommandErrorHandler:
             return
 
         error = getattr(error, "original", error)
-        command_name = ctx.invoked_with
         if isinstance(error, commands.CheckFailure):
+            if isinstance(error, commands.NoPrivateMessage):
+                await ctx.send(
+                    f"The command `{ctx.invoked_with}` can't be used in a DM."
+                )
+                return
             is_owner = await ctx.bot.is_owner(ctx.message.author)
             if is_owner is True:
                 await ctx.command.reinvoke(ctx)
             else:
-                await ctx.send(f"You can't use the command `{command_name}`, sorry!")
+                await ctx.send(
+                    f"You can't use the command `{ctx.invoked_with}`, sorry!"
+                )
         elif isinstance(error, commands.CommandNotFound):
+            if ctx.prefix == "":
+                return
             all_command_names = list(
                 itertools.chain(
                     *[
@@ -52,10 +60,10 @@ class CommandErrorHandler:
             )
 
             closest_command_name, closest_ratio = process.extractOne(
-                command_name, all_command_names
+                ctx.invoked_with, all_command_names
             )
 
-            no_command = f"I don't have the command `{command_name}`, sorry!"
+            no_command = f"I don't have the command `{ctx.invoked_with}`, sorry!"
             try_help_command = (
                 f"Try using `{ctx.prefix}help` for information about my commands."
             )
@@ -91,7 +99,7 @@ class CommandErrorHandler:
             await ctx.send(
                 (
                     "You seem to have missed a required argument,"
-                    f"check {ctx.prefix}help {command_name}"
+                    f"check {ctx.prefix}help {ctx.invoked_with}"
                     "for information about how to use it."
                 )
             )
@@ -100,7 +108,7 @@ class CommandErrorHandler:
             if is_owner is True:
                 await ctx.command.reinvoke(ctx)
             else:
-                await ctx.send(f"The command `{command_name}` has been disabled.")
+                await ctx.send(f"The command `{ctx.invoked_with}` has been disabled.")
         elif isinstance(error, discord.Forbidden):
             await ctx.send(
                 f"Something went wrong on Discord's side. Sorry for the inconvenience."
@@ -108,7 +116,7 @@ class CommandErrorHandler:
         elif isinstance(error, commands.NoPrivateMessage):
             try:
                 await ctx.send(
-                    f"The `{command_name}` cannot be used in Private Messages."
+                    f"The `{ctx.invoked_with}` cannot be used in Private Messages."
                 )
             except discord.Forbidden:
                 pass

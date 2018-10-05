@@ -23,6 +23,7 @@ class AdminCommands:
         self.clearing_channels: List[discord.TextChannel] = []
 
     @commands.command(name="Purge", usage="purge (count) (user)")
+    @commands.guild_only()
     @commands.has_permissions(manage_messages=True)
     async def purge(
         self, ctx, limit: int = 100, fuzzy_user: Union[FuzzyUser, str] = "all"
@@ -55,6 +56,7 @@ class AdminCommands:
         await ctx.channel.purge(limit=limit, check=check_user)
 
     @commands.command(name="ClearAll", aliases=["clear-all"], usage="clearall")
+    @commands.guild_only()
     @commands.cooldown(
         1, 86400, commands.BucketType.user
     )  # So one person can't abuse the feature.
@@ -100,6 +102,7 @@ class AdminCommands:
     @commands.cooldown(
         1, 86400, commands.BucketType.channel
     )  # Only allow this to be used once a day in a channel.
+    @commands.guild_only()
     @commands.has_permissions(manage_messages=True)
     async def stop_clearing(self, ctx: commands.Context):
         """Stops `clear_all` from removing all the message.
@@ -112,6 +115,7 @@ class AdminCommands:
             self.clearing_channels.remove(ctx.channel.id)
 
     @commands.command(name="Kick", usage="kick [user] (reason)")
+    @commands.guild_only()
     @commands.has_permissions(kick_members=True)
     async def kick(self, ctx: commands.Context, user: FuzzyUser, reason: str = ""):
         """Kick a user.

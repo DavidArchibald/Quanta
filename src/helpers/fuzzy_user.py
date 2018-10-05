@@ -90,14 +90,16 @@ class FuzzyUser(commands.Converter):
 
         if result_count == 1:
             reaction = await wait_for_reactions(ctx, whom, (emojis.yes, emojis.no))
-            if reaction.emoji == emojis.yes:
+            if reaction is None:
+                return (identifier, None)
+            elif reaction.emoji == emojis.yes:
                 user_identifier = result[0][0]
             else:
                 return (identifier, whom)
         else:
             reaction = await wait_for_reactions(ctx, whom, (*number_emojis, emojis.no))
-            if reaction == emojis.no:
-                return (identifier, whom)
+            if reaction is None or reaction == emojis.no:
+                return (identifier, None)
 
             reaction_number = number_emojis.index(reaction.emoji)
             user_identifier = result[reaction_number][0]
@@ -129,6 +131,7 @@ class GetUser:
         usage="getuser [user]",
         aliases=["get-user", "get_member", "getmember", "get-member"],
     )
+    @commands.guild_only()
     async def get_user(self, ctx: commands.Context, fuzzy_user: FuzzyUser):
         """Gets a user using a member string and fuzzy checking.
 

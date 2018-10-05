@@ -123,7 +123,7 @@ async def confirm_action(
 
     reaction = await wait_for_reactions(ctx, confirm, (emojis.yes, emojis.no))
 
-    if reaction.emoji == emojis.yes:
+    if reaction is not None and reaction.emoji == emojis.yes:
         return (True, confirm)
 
     return (False, confirm)
@@ -175,7 +175,11 @@ async def wait_for_reactions(
         if user == ctx.bot.user:
             continue
 
-        if user == ctx.message.author and reaction.emoji in reactions:
+        if (
+            user == ctx.message.author
+            and reaction is not None
+            and reaction.emoji in reactions
+        ):
             break
 
         if remove_reactions is True:

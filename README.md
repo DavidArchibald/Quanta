@@ -11,7 +11,7 @@ However if you want to contribute to the development, or run your own version(wh
 
 3. This step is technically optional because it will fallback to simply using "?" as the prefix otherwise. However if you want to, setup a postgres server if you do not have one to use already, how to do so is outside the scope of setting up Quanta.
 
-    * Create a table named `prefixes` used to store the prefixes at the channel level.
+    * Create a table named `prefixes` used to store the prefixes.
 
         The exact command I used was:
         ```SQL

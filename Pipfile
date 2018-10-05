@@ -18,5 +18,7 @@ PyYAML = "==3.*"
 tabulate = "*"
 
 [dev-packages]
+black = "*"
+flake8 = "*"
 
 [requires]
