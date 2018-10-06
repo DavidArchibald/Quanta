@@ -16,9 +16,13 @@ Django = ">=2.1.2,<3.*"
 python-Levenshtein = "==0.12.*"
 PyYAML = "==3.*"
 tabulate = "*"
+jsonschema = "*"
 
 [dev-packages]
 black = "*"
 flake8 = "*"
 
 [requires]
+
+[pipenv]
+allow_prereleases = true

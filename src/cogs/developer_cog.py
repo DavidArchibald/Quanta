@@ -95,7 +95,7 @@ class DeveloperCommands:
 
         # This won't terminate it for 30 seconds
         # Because this command will still be running.
-        exit_handler.graceful_terminate()
+        await exit_handler.graceful_terminate()
 
         for _ in range(0, wait):
             commands_running = exit_handler.get_commands_running() - 1

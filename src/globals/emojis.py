@@ -4,8 +4,8 @@ from discord.ext import commands
 
 loading = None
 cancel = None
-yes = None
-no = None
+yes = check = None
+no = error = x = None
 cog = None
 gear = None
 circle_check = None
@@ -39,7 +39,10 @@ def get_emojis(bot: commands.Bot):
     global loading
     global cancel
     global yes
+    global check
     global no
+    global error
+    global x
     global cog
     global gear
     global circle_check
@@ -50,8 +53,12 @@ def get_emojis(bot: commands.Bot):
 
     loading = bot.get_emoji(478317750817914910)  # <quantaloading:478317750817914910>
     cancel = bot.get_emoji(475032169086058496)  # <:quantax:475032169086058496>
-    yes = bot.get_emoji(475029940639891467)  # "<:quantacheck:475029940639891467>"
-    no = bot.get_emoji(475032169086058496)  # "<:quantax:475032169086058496>"
+    yes = check = bot.get_emoji(
+        475029940639891467
+    )  # "<:quantacheck:475029940639891467>"
+    no = error = x = bot.get_emoji(
+        475032169086058496
+    )  # "<:quantax:475032169086058496>"
     cog = bot.get_emoji(479811570440863750)  # <quantagear:479811570440863750>
     gear = cog
     circle_check = bot.get_emoji(

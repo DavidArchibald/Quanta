@@ -1,81 +1,81 @@
 #!/usr/bin/env python3
 
+import asyncio
 import signal
 import sys
-from threading import Lock
+from typing import Optional
 
 from discord.ext import commands
-
-from typing import Optional
 
 
 class ExitHandler:
     def __init__(self) -> None:
         self.commands_running = 0
-        self.lock = Lock()
+        self.lock = asyncio.Lock()
         self.SIGTERM = False
 
         self.original_sigint = signal.getsignal(signal.SIGINT)
         self.original_sigterm = signal.getsignal(signal.SIGTERM)
 
     async def on_command(self, ctx: commands.Context):
-        self.lock.acquire()
-        self.commands_running += 1
-        self.lock.release()
+        async with self.lock:
+            self.commands_running += 1
 
     async def on_command_completion(self, ctx: commands.Context):
-        self.lock.acquire()
-        self.commands_running -= 1
+        async with self.lock:
+            self.commands_running -= 1
 
-        if self.SIGTERM is True and self.commands_running == 0:
-            self.lock.release()
-            await ctx.bot.logout()
-            sys.exit(0)
-            return
-
-        self.lock.release()
+            if self.SIGTERM is True and self.commands_running == 0:
+                await ctx.bot.logout()
+                sys.exit(0)
+                return
 
     async def on_command_error(self, ctx: commands.Context, error: Exception):
         await self.on_command_completion(ctx)
 
-    def signal_terminate_handler(self, signal, frame):
+    async def signal_terminate_handler(self, signal, frame):
         signal.signal(signal.SIGTERM, self.original_sigterm)
         if self.SIGTERM is True or self.commands_running == 0:
             sys.exit(0)
 
-        self.lock.acquire()
-        self.SIGTERM = True
-        self.lock.release()
-        signal.signal(signal.SIGTERM, self.signal_terminate_handler)
+        async with self.lock:
+            self.SIGTERM = True
+        signal.signal(
+            signal.SIGTERM, lambda: asyncio.create_task(self.signal_terminate_handler)
+        )
 
-    def signal_interupt_handler(self, signal, frame):
+    async def signal_interupt_handler(self, signal, frame):
         signal.signal(signal.SIGINT, self.original_sigint)
         if self.SIGTERM is True or self.commands_running == 0:
             sys.exit(0)
 
-        self.lock.acquire()
-        self.SIGTERM = True
-        self.lock.release()
+        async with self.lock:
+            self.SIGTERM = True
         print("Use CTRL-C again if you're sure you want to skip cleanup handlers.")
-        signal.signal(signal.SIGINT, self.signal_terminate_handler)
+        signal.signal(
+            signal.SIGINT, lambda: asyncio.create_task(self.signal_terminate_handler)
+        )
 
     def create_signals(self):
-        signal.signal(signal.SIGTERM, self.signal_terminate_handler)
-        signal.signal(signal.SIGINT, self.signal_interupt_handler)
+        signal.signal(
+            signal.SIGTERM, lambda: asyncio.create_task(self.signal_terminate_handler)
+        )
+        signal.signal(
+            signal.SIGINT, lambda: asyncio.create_task(self.signal_interupt_handler)
+        )
 
     def is_terminating(self) -> bool:
         return self.SIGTERM
 
-    def graceful_terminate(self):
-        self.lock.acquire()
-        self.SIGTERM = True
-        self.lock.release()
+    async def graceful_terminate(self):
+        async with self.lock:
+            self.SIGTERM = True
         if self.commands_running == 0:
             sys.exit(0)
 
-    def cancel_terminate(self):
-        self.lock.acquire()
-        self.SIGTERM = False
+    async def cancel_terminate(self):
+        async with self.lock:
+            self.SIGTERM = False
         self.lock.release()
 
     def get_commands_running(self) -> int:

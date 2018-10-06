@@ -1,35 +1,30 @@
 #!/usr/bin/env python3
 
-import discord
-from discord.ext import commands
-
-import aiohttp
+import asyncio
+import copy
+import datetime
+import html
+import itertools
+import json
+import os
+import textwrap
+import logging
+import math
+import random
+import re
 import urllib
 
-import datetime
-
-from fuzzywuzzy import process
-
+import aiohttp
+import discord
 import humanize
-import itertools
-
-import html
-import json
-import yaml
+import jsonschema
 import xml.etree.cElementTree
-
-import re
-import textwrap
-
-import random
-
-import copy
-import os
-
+import yaml
 from ..globals import emojis, latency, uptime
-
 from ..helpers import session_helper
-from ..helpers.helper_functions import wait_for_reactions, confirm_action
+from ..helpers.helper_functions import confirm_action, wait_for_reactions
+from discord.ext import commands
+from fuzzywuzzy import process
 
 
 class GeneralCommands:
@@ -37,13 +32,23 @@ class GeneralCommands:
 
     icon = "<:quantaperson:473983023797370880>"
 
-    def __init__(self) -> None:
+    def __init__(self, bot: commands.Bot) -> None:
         config_path = os.path.join(os.path.dirname(__file__), "../secrets/config.yaml")
         with open(config_path, "r") as config_file:
             config = yaml.safe_load(config_file)
 
         wolfram_alpha = config["wolfram_alpha"]
-        self.app_id = wolfram_alpha["app_id"]
+        self._app_id = wolfram_alpha["app_id"]
+
+        self._trivia = []
+        self._trivia_count = 25
+        self._trivia_minimum = 5
+        self._trivia_packet_size = 5
+        self._trivia_task = None
+        self._trivia_lock = asyncio.Lock()
+
+    async def on_ready(self):
+        await self.load_trivia()
 
     @commands.command(name="Ping", usage="ping")
     async def ping(self, ctx, round_to=4):
@@ -239,43 +244,29 @@ class GeneralCommands:
         trivia = None
         async with ctx.typing():
             await ctx.message.add_reaction(emojis.loading)
-
-            something_went_wrong = "Sorry, something went wrong with the trivia API."
-            url = "https://opentdb.com/api.php?amount=1"
-
-            session = await session_helper.get_session()
-            try:
-                async with session.get(url) as response:
-                    if response.status != 200:
-                        await ctx.send(something_went_wrong)
-                        return
-                    try:
-                        trivia = json.loads(await response.text())["results"][0]
-                    except (json.decoder.JSONDecodeError, TypeError, IndexError):
-                        await ctx.send(something_went_wrong)
-            except aiohttp.ClientError:
-                await ctx.send(something_went_wrong)
-                return
-
-        try:
-            category = html.unescape(trivia["category"])
-            question = html.unescape(trivia["question"])
-            question_type = html.unescape(trivia["type"])
-            correct_answer = html.unescape(trivia["correct_answer"])
-            incorrect_answers = [
-                html.unescape(item) for item in trivia["incorrect_answers"]
-            ]
-
-            if question_type == "boolean":
-                answers = ["True", "False"]
-            else:
-                answers = [correct_answer, *incorrect_answers]
-                random.shuffle(answers)
-        except (KeyError, ValueError):
-            await ctx.send(something_went_wrong)
-            return
+            trivia = await self.get_trivia(ctx)
 
         await ctx.message.remove_reaction(emojis.loading, ctx.bot.user)
+
+        if trivia is None:
+            logging.warning("get_trivia returned None unexpectedly.")
+            await ctx.message.add_reaction(emojis.error)
+            await ctx.send("An unexpected error occurred.")
+            return
+
+        category = html.unescape(trivia["category"])
+        question = html.unescape(trivia["question"])
+        question_type = html.unescape(trivia["type"])
+        correct_answer = html.unescape(trivia["correct_answer"])
+        incorrect_answers = [
+            html.unescape(item) for item in trivia["incorrect_answers"]
+        ]
+
+        if question_type == "boolean":
+            answers = ["True", "False"]
+        else:
+            answers = [correct_answer, *incorrect_answers]
+            random.shuffle(answers)
 
         blank_answers = [
             f"{index + 1}. {answer}" for index, answer in enumerate(answers)
@@ -345,7 +336,7 @@ class GeneralCommands:
             query = urllib.parse.quote(query)
             query_url = (
                 "http://api.wolframalpha.com/v2/query"
-                f"?appid={self.app_id}"
+                f"?appid={self._app_id}"
                 f"&input={query}"
                 # "&includepodid=Result"
                 "&format=plaintext"
@@ -359,6 +350,8 @@ class GeneralCommands:
                         response_tree = xml.etree.cElementTree.fromstring(text)
                     except xml.etree.ElementTree.ParseError as exception:
                         await ctx.send(something_went_wrong)
+                        logging.warning("Wolfram did not send valid xml.")
+                        raise exception
                         return
 
                     result = None
@@ -372,12 +365,124 @@ class GeneralCommands:
                     # print(response_tree[0])
                     # result_pod = ...
                     print(result)
-            except aiohttp.ClientError:
+            except aiohttp.ClientError as exception:
                 await ctx.send(something_went_wrong)
+                logging.warn("Could not connect to WolframAlpha.")
+                raise exception
                 return
 
             # await ctx.send(plaintext_result)
 
+    async def get_trivia(self, ctx=None):
+        """Gets a trivia question.
+        Not providing ctx makes it error to console.
+
+        Keyword Arguments:
+            ctx {commands.Context} -- Information about where a command was run.
+
+        Returns:
+            Object -- The trivia object.
+        """
+
+        if len(self._trivia) == 0:
+            if self._trivia_task is not None:
+                # Wait for the previous trivia task to be done
+                await self._trivia_task
+            else:
+                await self.load_trivia(ctx)
+        elif len(self._trivia) < self._trivia_count:
+            # Let the trivia task run in the background.
+            async def _trivia_callback():
+                async with self._trivia_lock:
+                    self._trivia_task = None
+
+            self._trivia_task = ctx.bot.loop.create_task(self.load_trivia(ctx))
+            self._trivia_task.add_done_callback(
+                lambda _: ctx.bot.loop.create_task(_trivia_callback())
+            )
+            if self._trivia_task.done():
+                self._trivia_task.remove_done_callback()
+                await _trivia_callback()
+
+        return self._trivia.pop()
+
+    async def load_trivia(self, ctx=None):
+        # await asyncio.sleep(10)
+        load_count = self._trivia_count - len(self._trivia)
+        # Round up to self._trivia_load_count, and a minimum of self._trivia_minimum
+        load_count = max(
+            self._trivia_minimum,
+            math.ceil(load_count / self._trivia_packet_size) * self._trivia_packet_size,
+        )
+
+        url = f"https://opentdb.com/api.php?amount={load_count}"
+        trivia_wrong_format = "Sorry, something went wrong with the trivia API."
+        trivia_wrong_format_logging = (
+            "opentdb did not respond with the expected format."
+        )
+
+        session = await session_helper.get_session()
+        try:
+            async with session.get(url) as response:
+                if response.status != 200:
+                    if ctx is not None:
+                        await ctx.send(trivia_wrong_format)
+                    logging.warning(trivia_wrong_format_logging)
+                    return
+
+                response_text = await response.text()
+                try:
+                    trivia_response_json = json.loads(response_text)
+                except json.decoder.JSONDecodeError as exception:
+                    if ctx is not None:
+                        await ctx.send(trivia_wrong_format)
+                    logging.warning("opentdb did not send valid json.")
+                    raise exception
+
+                response_json_schema = {
+                    "type": "object",
+                    "properties": {
+                        "status": {"type": "number"},
+                        "results": {
+                            "type": "array",
+                            "minItems": load_count,
+                            "maxItems": load_count,
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "category": {"type": "string"},
+                                    "question": {"type": "string"},
+                                    "type": {"type": "string"},
+                                    "correct_answer": {"type": "string"},
+                                    "incorrect_answers": {
+                                        "type": "array",
+                                        "items": {"type": "string"},
+                                    },
+                                },
+                            },
+                        },
+                    },
+                }
+
+                try:
+                    jsonschema.validate(trivia_response_json, response_json_schema)
+                except jsonschema.exceptions.ValidationError as exception:
+                    await ctx.send(self._trivia_wrong_format)
+                    logging.warning(self._trivia_wrong_format_logging)
+                    raise exception
+                    return
+
+                trivia_questions = trivia_response_json["results"]
+
+                self._trivia.extend(trivia_questions)
+
+        except aiohttp.ClientError as exception:
+            if ctx is not None:
+                await ctx.send(self._trivia_wrong_format)
+            logging.warning("Could not connect to opentdb.")
+            raise exception
+            return
+
 
 def setup(bot: commands.Bot):
-    bot.add_cog(GeneralCommands())
+    bot.add_cog(GeneralCommands(bot))
