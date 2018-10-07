@@ -92,16 +92,16 @@ class Database:
 
         channel = ctx.message.channel
         if isinstance(channel, discord.abc.PrivateChannel):
-            identifier = str(channel.id)
+            snowflake = str(channel.id)
         elif isinstance(channel, discord.abc.GuildChannel):
-            identifier = str(channel.guild.id)
+            snowflake = str(channel.guild.id)
 
-        prefix = self.cache.get(identifier)
+        prefix = self.cache.get(snowflake)
         if prefix == -1:
             # Calling this directly won't cache it.
-            prefix = await self._get_prefix(identifier)
+            prefix = await self._get_prefix(snowflake)
 
-            self.cache.set(identifier, prefix)
+            self.cache.set(snowflake, prefix)
 
         return prefix
 
@@ -110,20 +110,20 @@ class Database:
 
     @with_connection()
     async def _get_prefix(
-        self, identifier: int, connection: Optional[asyncpg.Connection] = None
+        self, snowflake: int, connection: Optional[asyncpg.Connection] = None
     ) -> str:
         if connection is None:
             return "?"
 
         row = await connection.fetchrow(
-            "SELECT prefix FROM prefixes WHERE identifier=$1", identifier
+            "SELECT prefix FROM prefixes WHERE snowflake=$1", snowflake
         )
 
         if row is None:
             async with connection.transaction():
                 # Default prefix is "?"
                 await connection.execute(
-                    "INSERT INTO prefixes VALUES ($1, $2)", identifier, "?"
+                    "INSERT INTO prefixes VALUES ($1, $2)", snowflake, "?"
                 )
 
             return "?"
@@ -154,17 +154,17 @@ class Database:
 
         channel = ctx.message.channel
         if isinstance(channel, discord.abc.PrivateChannel):
-            identifier = str(channel.id)
+            snowflake = str(channel.id)
         elif isinstance(channel, discord.abc.GuildChannel):
-            identifier = str(channel.guild.id)
+            snowflake = str(channel.guild.id)
 
         async with connection.transaction():
             await connection.execute(
-                "UPDATE prefixes SET prefix=$1 WHERE prefixes.identifier=$2",
+                "UPDATE prefixes SET prefix=$1 WHERE prefixes.snowflake=$2",
                 prefix,
-                identifier,
+                snowflake,
             )
-            self.cache.set(identifier, prefix)
+            self.cache.set(snowflake, prefix)
 
     def is_connected(self) -> bool:
         """Returns if the database is connected or not.

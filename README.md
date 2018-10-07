@@ -16,7 +16,7 @@ However if you want to contribute to the development, or run your own version(wh
         The exact command I used was:
         ```SQL
         CREATE TABLE prefixes (
-            serverid text PRIMARY KEY NOT NULL,
+            snowflake text PRIMARY KEY NOT NULL,
             prefix varchar(32)
         );
         ```
