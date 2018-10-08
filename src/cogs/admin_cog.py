@@ -5,6 +5,9 @@ from discord.ext import commands
 
 import re
 
+import logging
+import traceback
+
 from ..helpers.helper_functions import confirm_action
 from ..helpers.fuzzy_user import FuzzyUser
 
@@ -272,7 +275,8 @@ class AdminCommands:
                 await ctx.send(no_database)
             return
         except Exception:
-            unexpected_exception = "An unexpected Exception occurred."
+            unexpected_exception = "An unexpected exception occurred."
+            logging.warning(traceback.format_exc())
             if message is not None:
                 await message.edit(content=unexpected_exception)
             else:

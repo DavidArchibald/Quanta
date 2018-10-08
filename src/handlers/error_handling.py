@@ -10,7 +10,6 @@ import traceback
 import itertools
 from fuzzywuzzy import process
 
-
 from ..globals import emojis, variables
 from ..helpers.helper_functions import wait_for_reactions
 
@@ -37,6 +36,15 @@ class CommandErrorHandler:
             if isinstance(error, commands.NoPrivateMessage):
                 await ctx.send(
                     f"The command `{ctx.invoked_with}` can't be used in a DM."
+                )
+                return
+            elif isinstance(error, commands.BotMissingPermissions):
+                missing_perms = error.missing_perms
+                missing_permissions = (
+                    ", ".join(missing_perms[:-1]) + "and, " + missing_perms[-1]
+                )
+                await ctx.send(
+                    f"I don't have the permissions({missing_permissions}) to"
                 )
                 return
             is_owner = await ctx.bot.is_owner(ctx.message.author)

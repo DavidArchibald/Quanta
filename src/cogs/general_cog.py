@@ -1,30 +1,36 @@
 #!/usr/bin/env python3
 
 import asyncio
+import aiohttp
+import discord
+from discord.ext import commands
+
 import copy
 import datetime
-import html
 import itertools
-import json
 import os
 import textwrap
-import logging
 import math
 import random
 import re
 import urllib
 
-import aiohttp
-import discord
+import logging
+import traceback
+
+from fuzzywuzzy import process
+
 import humanize
+
+import html
+import ujson
 import jsonschema
 import xml.etree.cElementTree
 import yaml
+
 from ..globals import emojis, latency, uptime
 from ..helpers import session_helper
 from ..helpers.helper_functions import confirm_action, wait_for_reactions
-from discord.ext import commands
-from fuzzywuzzy import process
 
 
 class GeneralCommands:
@@ -35,10 +41,38 @@ class GeneralCommands:
     def __init__(self, bot: commands.Bot) -> None:
         config_path = os.path.join(os.path.dirname(__file__), "../secrets/config.yaml")
         with open(config_path, "r") as config_file:
-            config = yaml.safe_load(config_file)
+            try:
+                config = yaml.safe_load(config_file)
+            except yaml.YAMLError:
+                pass
 
-        wolfram_alpha = config["wolfram_alpha"]
-        self._app_id = wolfram_alpha["app_id"]
+        if config is not None:
+            wolfram_scheme = {
+                "type": "object",
+                "properties": {
+                    "wolfram_alpha": {
+                        "type": "object",
+                        "properties": {"app_id": {"type": "string"}},
+                    }
+                },
+            }
+
+            try:
+                jsonschema.validate(config, wolfram_scheme)
+            except jsonschema.exceptions.ValidationError:
+                logging.warning(
+                    (
+                        "The secrets config doesn't have "
+                        "valid wolfram_alpha configuration."
+                        "Wolfram Alpha based commands will be disabled."
+                    )
+                )
+                logging.warning(
+                    f"The following exception was suppressed:\n{traceback.format_exc()}"
+                )
+            else:
+                wolfram_alpha = config["wolfram_alpha"]
+                self._app_id = wolfram_alpha["app_id"]
 
         self._trivia = []
         self._trivia_count = 25
@@ -328,6 +362,9 @@ class GeneralCommands:
 
     @commands.command(name="Wolfram", usage="wolfram [query]")
     async def wolfram(self, ctx: commands.Context, *, query):
+        if self._app_id is None:
+            await ctx.send("Quanta is not currently connected to Wolfram Alpha.")
+            return
         async with ctx.typing():
             something_went_wrong = (
                 "Sorry, something went wrong with connecting to Wolfram Alpha."
@@ -432,8 +469,8 @@ class GeneralCommands:
 
                 response_text = await response.text()
                 try:
-                    trivia_response_json = json.loads(response_text)
-                except json.decoder.JSONDecodeError as exception:
+                    trivia_response_json = ujson.loads(response_text)
+                except ValueError as exception:
                     if ctx is not None:
                         await ctx.send(trivia_wrong_format)
                     logging.warning("opentdb did not send valid json.")

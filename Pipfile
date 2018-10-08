@@ -16,7 +16,10 @@ Django = ">=2.1.2,<3.*"
 python-Levenshtein = "==0.12.*"
 PyYAML = "==3.*"
 tabulate = "*"
+aioredis = "*"
 jsonschema = "*"
+ujson = "*"
+msgpack = "*"
 
 [dev-packages]
 black = "*"

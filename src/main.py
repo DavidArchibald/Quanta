@@ -2,21 +2,22 @@
 
 """A Discord.py bot."""
 
-import os
-from typing import List
-
+import asyncio
 import discord
 from discord.ext import commands
 import discord.utils
+
+import os
+
 import yaml
+
+import re
 
 from .globals import variables
 from .handlers import exit_handling
 from .helpers import database_helper, logs_helper
 
-import asyncio
-import re
-
+from typing import List
 
 exit_handler = None
 

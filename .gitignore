@@ -5,6 +5,7 @@ src/secrets/*
 venv
 bot.log*
 kube
+dump.rbd
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

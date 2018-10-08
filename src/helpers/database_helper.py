@@ -1,80 +1,116 @@
 #!/usr/bin/env python3
 
+import os
+import logging
+
 import discord
 from discord.ext import commands
 
 import asyncio
+import aioredis
 import asyncpg
-
-import os
-
+import jsonschema
 import yaml
 
-import logging
+import traceback
 
-import functools
-
-from typing import Optional
-
-# "Least Recently Used (LRU) cache"
-# Caches a (key, value) pair by how much it has been used recently.
-from .cache import LFUCache
 from .helper_functions import HelperCommands
 
 
 helperCommands = HelperCommands()
 
 
-def with_connection():
-    def wrapper(method):
-        @functools.wraps(method)
-        async def get_connection(self, *args, **kwargs):
-            if hasattr(kwargs, "connection"):
-                return await method(self, *args, **kwargs)
-
-            if self._pool is None:
-                raise RuntimeError(
-                    (
-                        f"The function {method.__name__} wasn't run"
-                        "because the database isn't connected to."
-                    )
-                )
-            async with self._pool.acquire() as connection:
-                kwargs["connection"] = connection
-
-                return await method(self, *args, **kwargs)
-
-        return get_connection
-
-    return wrapper
-
-
 class Database:
     def __init__(
-        self, db_info_path: str = None, loop: asyncio.AbstractEventLoop = None
+        self, secrets_path: str = None, loop: asyncio.AbstractEventLoop = None
     ) -> None:
-        source = os.path.dirname(os.path.dirname(__file__))
-        database_info_path = db_info_path or os.path.join(source, "secrets/config.yaml")
-
-        # Opens ./src/secrets/config.yaml or the
-        with open(database_info_path, "r") as database_info_file:
-            config = yaml.safe_load(database_info_file)
-            database_info = config["database_info"]
-
-        self._database_info = database_info
+        self._database_info = None
+        self._redis_config = None
+        self._redis_pool = None
         self._pool = None
-        self.cache = LFUCache(128)
-        self.loop = loop
+        self._loop = loop
+        self._cache = None
+
+        source = os.path.dirname(os.path.dirname(__file__))
+        secrets_path = secrets_path or "secrets/config.yaml"
+
+        if not os.path.isabs(secrets_path):
+            secrets_path = os.path.join(source, secrets_path)
+
+        # Opens ./src/secrets/config.yaml or the passed in path.
+        with open(secrets_path, "r") as secrets_file:
+            try:
+                config = yaml.safe_load(secrets_file)
+            except yaml.YAMLError:
+                pass
+
+        if config is not None:
+            database_schema = {
+                "type": "object",
+                "properties": {
+                    "database_info": {
+                        "type": "object",
+                        "properties": {
+                            "database": {"type": "string"},
+                            "user": {"type": "string"},
+                            "password": {"type": "string"},
+                            "host": {"type": "string"},
+                        },
+                    }
+                },
+            }
+
+            try:
+                jsonschema.validate(config, database_schema)
+            except jsonschema.exceptions.ValidationError:
+                logging.warning("The database credentials have not been passed.")
+                logging.warning(
+                    f"The following exception was suppressed:\n{traceback.format_exc()}"
+                )
+            else:
+                self._database_info = config["database_info"]
+
+            if "redis" in config:
+                redis_scheme = {
+                    "type": "object",
+                    "properties": {
+                        "address": {"type": "string"},
+                        "password": {"type": "string", "optional": "true"},
+                    },
+                }
+                try:
+                    jsonschema.validate(config["redis"], redis_scheme)
+                except jsonschema.exceptions.ValidationError:
+                    self._cache = {}
+                else:
+                    self._redis_config = config["redis"]
 
     async def connect(self):
-        """Creates a connection pool."""
+        """Creates a connection pool.
+        Connects to Redis if able to. Silently falls back otherwise.
+        """
+        if self._database_info is None:
+            raise RuntimeError("The database credentials weren't given.")
         try:
-            if self.loop and not hasattr(self._database_info, "loop"):
-                self._database_info.set(loop=self.loop)
+            if self._loop and not hasattr(self._database_info, "loop"):
+                self._database_info.set(loop=self._loop)
             self._pool = await asyncpg.create_pool(**self._database_info)
         except Exception as exception:
             logging.warn('The database refused to connect! Falling back to "?" prefix.')
             print(exception)
+
+        if self._redis_config is not None:
+            # The redis_config has already been validated.
+            if self._loop and not hasattr(self._redis_config, "loop"):
+                self._redis_config["loop"] = self._loop
+
+            if self._redis_config.get("minsize", None) is None:
+                self._redis_config["minsize"] = 3
+
+            if self._redis_config.get("maxsize", None) is None:
+                minsize = self._redis_config.get("minsize")
+                self._redis_config["maxsize"] = min(5, minsize + 5)
+            self._redis_pool = await aioredis.create_redis_pool(**self._redis_config)
 
     async def get_prefix(self, ctx: commands.Context) -> str:
         """Gets the channel's prefix for running with
@@ -96,75 +132,77 @@ class Database:
         elif isinstance(channel, discord.abc.GuildChannel):
             snowflake = str(channel.guild.id)
 
-        prefix = self.cache.get(snowflake)
-        if prefix == -1:
+        if self._cache is None:
+            with await self._redis_pool as connection:
+                prefix = await connection.execute("GET", snowflake)
+        else:
+            prefix = self._cache.get(snowflake, None)
+
+        if prefix is None:
             # Calling this directly won't cache it.
             prefix = await self._get_prefix(snowflake)
 
-            self.cache.set(snowflake, prefix)
+            if self._cache is None:
+                with await self._redis_pool as connection:
+                    await connection.execute("SET", snowflake, prefix)
+            else:
+                self._cache.set(snowflake, prefix)
+        else:
+            prefix = prefix.decode("utf-8")
 
         return prefix
 
     def acquire(self, timeout=None):
         return asyncpg.pool.PoolAcquireContext(self._pool, timeout)
 
-    @with_connection()
-    async def _get_prefix(
-        self, snowflake: int, connection: Optional[asyncpg.Connection] = None
-    ) -> str:
-        if connection is None:
-            return "?"
+    async def _get_prefix(self, snowflake: int) -> str:
+        async with self.acquire() as connection:
+            row = await connection.fetchrow(
+                "SELECT prefix FROM prefixes WHERE snowflake=$1", snowflake
+            )
 
-        row = await connection.fetchrow(
-            "SELECT prefix FROM prefixes WHERE snowflake=$1", snowflake
-        )
+            if row is None:
+                async with connection.transaction():
+                    # Default prefix is "?"
+                    await connection.execute(
+                        "INSERT INTO prefixes VALUES ($1, $2)", snowflake, "?"
+                    )
 
-        if row is None:
-            async with connection.transaction():
-                # Default prefix is "?"
-                await connection.execute(
-                    "INSERT INTO prefixes VALUES ($1, $2)", snowflake, "?"
-                )
+                return "?"
 
-            return "?"
+            return row["prefix"]
 
-        return row["prefix"]
-
-    @with_connection()
-    async def set_prefix(
-        self,
-        ctx: commands.Context,
-        prefix: str,
-        connection: Optional[asyncpg.Connection] = None,
-    ):
+    async def set_prefix(self, ctx: commands.Context, prefix: str):
         """Sets the server prefix.
 
         Arguments:
             ctx {discord.Context} -- Information about where the command was run.
             prefix {str} -- The prefix for the guild.
         """
-        if connection is None:
-            raise RuntimeError("The prefix cannot be set without a connection.")
+        async with self.acquire() as connection:
+            if prefix is None:
+                prefix = ""
 
-        if prefix is None:
-            prefix = ""
+            if not isinstance(prefix, str):
+                prefix = str(prefix)
 
-        if not isinstance(prefix, str):
-            prefix = str(prefix)
+            channel = ctx.message.channel
+            if isinstance(channel, discord.abc.PrivateChannel):
+                snowflake = str(channel.id)
+            elif isinstance(channel, discord.abc.GuildChannel):
+                snowflake = str(channel.guild.id)
 
-        channel = ctx.message.channel
-        if isinstance(channel, discord.abc.PrivateChannel):
-            snowflake = str(channel.id)
-        elif isinstance(channel, discord.abc.GuildChannel):
-            snowflake = str(channel.guild.id)
-
-        async with connection.transaction():
-            await connection.execute(
-                "UPDATE prefixes SET prefix=$1 WHERE prefixes.snowflake=$2",
-                prefix,
-                snowflake,
-            )
-            self.cache.set(snowflake, prefix)
+            async with connection.transaction():
+                await connection.execute(
+                    "UPDATE prefixes SET prefix=$1 WHERE prefixes.snowflake=$2",
+                    prefix,
+                    snowflake,
+                )
+                if self._cache is None:
+                    with await self._redis_pool as connection:
+                        await connection.execute("SET", snowflake, prefix)
+                else:
+                    self._cache.set(snowflake, prefix)
 
     def is_connected(self) -> bool:
         """Returns if the database is connected or not.
@@ -184,6 +222,9 @@ class Database:
             await asyncio.wait_for(self._pool.close(), timeout)
 
         await self._pool.terminate()
+
+        if self._redis_pool is not None:
+            self._redis_pool.close()
 
         self._pool = None
         logging.warn('Closed the database! Falling back to "?" prefix mode.')
