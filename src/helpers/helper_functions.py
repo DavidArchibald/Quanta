@@ -5,7 +5,7 @@ import asyncio
 import discord
 from discord.ext import commands
 
-from typing import Union, List, Tuple
+from typing import Union, List, Tuple, Optional
 
 from ..globals import emojis
 from ..globals.custom_types import DiscordReaction
@@ -65,6 +65,23 @@ class HelperCommands:
             await ctx.send("Hey owner!")
         else:
             await ctx.send("This is supposed to be unusable... How're you using this?")
+
+    @commands.command(name="GetReaction", usage="getreaction")
+    async def get_reaction(self, ctx: commands.Context):
+        message = await ctx.send("React with the reaction you want info on.")
+        reaction = await wait_for_reactions(ctx, message)
+        print(reaction.emoji.encode("unicode_escape"))
+        title = (
+            reaction.emoji.name
+            if isinstance(reaction.emoji, discord.Emoji)
+            else reaction.emoji
+        )
+        embed = discord.Embed(title=f"Reaction Info: {title}", colour=0x0000FF)
+        if isinstance(reaction.emoji, discord.Emoji):
+            embed.add_field(name="id", value=reaction.emoji.id)
+
+        await message.remove_reaction(reaction, ctx.bot.user)
+        await message.edit(embed=embed)
 
     @commands.group()
     async def lorem(self, ctx: commands.Context):
@@ -132,7 +149,7 @@ async def confirm_action(
 async def wait_for_reactions(
     ctx: commands.Context,
     message: discord.Message,
-    reactions: Union[List[DiscordReaction], Tuple],
+    reactions: Optional[Union[List[DiscordReaction], Tuple]] = None,
     timeout: Union[int, float] = 60.0,
     timeout_message: Union[
         str, discord.Embed, Tuple[str, discord.Embed], List
@@ -152,8 +169,9 @@ async def wait_for_reactions(
     else:
         content = timeout_message
 
-    for reaction in reactions:
-        await message.add_reaction(reaction)
+    if reactions is not None:
+        for reaction in reactions:
+            await message.add_reaction(reaction)
 
     while True:
         try:
@@ -164,7 +182,7 @@ async def wait_for_reactions(
             )
         except asyncio.TimeoutError:
             await message.edit(content=content, embed=embed)
-            if remove_reactions_on_timeout is True:
+            if reactions is not None and remove_reactions_on_timeout is True:
                 try:
                     await message.clear_reactions()
                 except discord.HTTPException:
@@ -178,17 +196,17 @@ async def wait_for_reactions(
         if (
             user == ctx.message.author
             and reaction is not None
-            and reaction.emoji in reactions
+            and (reactions is None or reaction.emoji in reactions)
         ):
             break
 
-        if remove_reactions is True:
+        if reactions is not None and remove_reactions is True:
             try:
                 await message.remove_reaction(reaction, user)
             except (discord.HTTPException, discord.InvalidArgument):
                 pass
 
-    if remove_reactions is True:
+    if reactions is not None and remove_reactions is True:
         try:
             await message.clear_reactions()
         except discord.HTTPException:

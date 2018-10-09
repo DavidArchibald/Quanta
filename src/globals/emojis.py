@@ -29,10 +29,8 @@ number_emojis = [
     "9\u20e3",  # nine
     "\U0001f51f",  # ten
 ]
-number_reactions = []
 
-zzz_emoji = "\U0001f605"
-zzz = None
+zzz = "\ud83d\udca4"
 
 
 def get_emojis(bot: commands.Bot):
@@ -70,12 +68,3 @@ def get_emojis(bot: commands.Bot):
         482275329201930250
     )  # <:quantaradiooff:482275329201930250>
     empty = bot.get_emoji(488182956133974017)  # "<:quantaempty:488182956133974017>"
-
-    global number_emojis
-    global number_reactions
-
-    for emoji in number_emojis:
-        number_reactions.append(bot.get_emoji(emoji))
-
-    global zzz
-    zzz = bot.get_emoji(zzz_emoji)
