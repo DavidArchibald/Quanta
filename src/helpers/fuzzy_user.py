@@ -5,8 +5,6 @@ from discord.ext import commands
 
 from fuzzywuzzy import process
 
-import itertools
-
 from ..globals import emojis
 from ..globals.custom_types import DiscordUser
 
@@ -59,22 +57,22 @@ class FuzzyUser(commands.Converter):
         if identifier.startswith("<@") and identifier.endswith(">"):
             identifier = identifier[2:-1]
 
-        compares = itertools.chain(
-            *[
-                filter(None, [str(member.id), member.name, member.nick])
-                for member in ctx.guild.members
-            ]
-        )
-        result = process.extract(identifier, compares, limit=result_count)
-        result = list(filter(lambda item: item[1] > 50, result))
-        result_count = len(result)
+        compares = [
+            name
+            for member in ctx.guild.members
+            for name in (str(member.id), member.name, member.nick)
+            if name is not None
+        ]
+        results = process.extract(identifier, compares, limit=result_count)
+        results = [result for result in results if result[1] > 5]
+        result_count = len(results)
 
-        if result_count == 0:
+        if not results:
             return (identifier, None)
 
         # Filtering the result to a reasonable threshold could also help)
         embed = discord.Embed()
-        for i, item in enumerate(result):
+        for i, item in enumerate(results):
             identifier = item[0]
             user = await commands.UserConverter().convert(ctx, identifier)
             embed.add_field(
@@ -93,7 +91,7 @@ class FuzzyUser(commands.Converter):
             if reaction is None:
                 return (identifier, None)
             elif reaction.emoji == emojis.yes:
-                user_identifier = result[0][0]
+                user_identifier = results[0][0]
             else:
                 return (identifier, whom)
         else:
@@ -102,7 +100,7 @@ class FuzzyUser(commands.Converter):
                 return (identifier, None)
 
             reaction_number = number_emojis.index(reaction.emoji)
-            user_identifier = result[reaction_number][0]
+            user_identifier = results[reaction_number][0]
 
         user = await commands.UserConverter().convert(ctx, user_identifier)
         return (user, whom)

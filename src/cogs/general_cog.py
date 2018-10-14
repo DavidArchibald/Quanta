@@ -7,7 +7,6 @@ from discord.ext import commands
 
 import copy
 import datetime
-import itertools
 import os
 import textwrap
 import math
@@ -38,7 +37,7 @@ class GeneralCommands:
 
     icon = "<:quantaperson:473983023797370880>"
 
-    def __init__(self, bot: commands.Bot) -> None:
+    def __init__(self, bot: commands.Bot, loop=None) -> None:
         config_path = os.path.join(os.path.dirname(__file__), "../secrets/config.yaml")
         with open(config_path, "r") as config_file:
             try:
@@ -80,6 +79,8 @@ class GeneralCommands:
         self._trivia_packet_size = 5
         self._trivia_task = None
         self._trivia_lock = asyncio.Lock()
+
+        self.loop = loop or asyncio.get_event_loop()
 
     async def on_ready(self):
         await self.load_trivia()
@@ -168,15 +169,13 @@ class GeneralCommands:
             command = ctx.bot.get_command(command_name)
 
             if command is None:
-                all_command_names = list(
-                    itertools.chain(
-                        *[
-                            [*command.aliases, command.name]
-                            for command in ctx.bot.commands
-                            if command.hidden is not True
-                        ]
-                    )
-                )
+                all_command_names = [
+                    name
+                    for command in ctx.bot.commands
+                    if command.hidden is not True
+                    for name in (*command.aliases, command.name)
+                ]
+
                 closest_command_name, closest_ratio = process.extractOne(
                     command_name, all_command_names
                 )
@@ -224,7 +223,7 @@ class GeneralCommands:
             embed.add_field(name="Usage", value=command.usage)
             embed.add_field(
                 name="Aliases",
-                value=", ".join([command.name.lower(), *command.aliases]),
+                value=", ".join((command.name.lower(), *command.aliases)),
                 inline=True,
             )
 
@@ -410,7 +409,7 @@ class GeneralCommands:
 
             # await ctx.send(plaintext_result)
 
-    async def get_trivia(self, ctx=None):
+    async def get_trivia(self, ctx=None, loop=None):
         """Gets a trivia question.
         Not providing ctx makes it error to console.
 
@@ -420,6 +419,7 @@ class GeneralCommands:
         Returns:
             Object -- The trivia object.
         """
+        loop = loop or self.loop or asyncio.get_running_loop()
 
         if len(self._trivia) == 0:
             if self._trivia_task is not None:
@@ -433,9 +433,9 @@ class GeneralCommands:
                 async with self._trivia_lock:
                     self._trivia_task = None
 
-            self._trivia_task = ctx.bot.loop.create_task(self.load_trivia(ctx))
+            self._trivia_task = self.loop.create_task(self.load_trivia(ctx))
             self._trivia_task.add_done_callback(
-                lambda _: ctx.bot.loop.create_task(_trivia_callback())
+                lambda _: self.loop.create_task(_trivia_callback())
             )
             if self._trivia_task.done():
                 self._trivia_task.remove_done_callback()

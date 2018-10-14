@@ -7,7 +7,6 @@ import asyncio
 import sys
 import traceback
 
-import itertools
 from fuzzywuzzy import process
 
 from ..globals import emojis, variables
@@ -57,15 +56,12 @@ class CommandErrorHandler:
         elif isinstance(error, commands.CommandNotFound):
             if ctx.prefix == "":
                 return
-            all_command_names = list(
-                itertools.chain(
-                    *[
-                        [*command.aliases, command.name]
-                        for command in ctx.bot.commands
-                        if command.hidden is not True
-                    ]
-                )
-            )
+            all_command_names = [
+                name
+                for command in ctx.bot.commands
+                if command.hidden is not True
+                for name in (*command.aliases, command.name)
+            ]
 
             closest_command_name, closest_ratio = process.extractOne(
                 ctx.invoked_with, all_command_names

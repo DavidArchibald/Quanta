@@ -26,6 +26,7 @@ class Database:
     ) -> None:
         self._database_info = None
         self._redis_config = None
+        self._redis = None
         self._redis_pool = None
         self._pool = None
         self._loop = loop
@@ -110,7 +111,17 @@ class Database:
             if self._redis_config.get("maxsize", None) is None:
                 minsize = self._redis_config.get("minsize")
                 self._redis_config["maxsize"] = min(5, minsize + 5)
-            self._redis_pool = await aioredis.create_redis_pool(**self._redis_config)
+
+            try:
+                self._redis_pool = await aioredis.create_redis_pool(
+                    **self._redis_config
+                )
+                self._redis = aioredis.Redis(self._redis_pool)
+            except OSError:
+                self._redis_pool = None
+                self._redis = None
+                self._cache = {}
+                logging.warn("Could not connect to Redis with the given credentials.")
 
     async def get_prefix(self, ctx: commands.Context) -> str:
         """Gets the channel's prefix for running with
@@ -134,6 +145,7 @@ class Database:
 
         if self._cache is None:
             with await self._redis_pool as connection:
+                await self._redis.select(0)
                 prefix = await connection.execute("GET", snowflake)
         else:
             prefix = self._cache.get(snowflake, None)
@@ -144,6 +156,7 @@ class Database:
 
             if self._cache is None:
                 with await self._redis_pool as connection:
+                    await self._redis.select(0)
                     await connection.execute("SET", snowflake, prefix)
             else:
                 self._cache.set(snowflake, prefix)
@@ -154,6 +167,9 @@ class Database:
 
     def acquire(self, timeout=None):
         return asyncpg.pool.PoolAcquireContext(self._pool, timeout)
+
+    def get_pool(self):
+        return self._redis_pool
 
     async def _get_prefix(self, snowflake: int) -> str:
         async with self.acquire() as connection:

@@ -43,14 +43,15 @@ async def get_prefix_wrapper(bot: commands.Bot, message: discord.Message) -> Lis
     ctx: fake_ctx = fake_ctx()
     ctx.message = message
     prefixes = await database.get_prefix(ctx)
-    if not isinstance(prefixes, tuple):
-        prefixes = tuple(prefixes)
+    if not isinstance(prefixes, list):
+        prefixes = list(prefixes)
+
     if (
         isinstance(ctx.message.channel, discord.abc.PrivateChannel)
         and "" not in prefixes
     ):
-        # This enables the use of no prefix by default.
-        prefixes = (*prefixes, "")
+        # This enables the use of no prefixes in PrivateChannels by default.
+        prefixes.append("")
     return commands.when_mentioned_or(*prefixes)(bot, message)
 
 

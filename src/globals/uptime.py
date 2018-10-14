@@ -11,10 +11,10 @@ sleepy = [
     lambda running_time: (
         f"{emojis.zzz} Oh, uh... yes, I'm awake how may I help you... "
         f"Oh, you want the uptime? I was woken up just {running_time} ago. "
-        f"I need more sleep {emojis.zzz}",
+        f"I need more sleep {emojis.zzz}"
     ),
     lambda running_time: (
-        f"I've only been awake for {running_time}."
+        f"I've only been awake for {running_time}. "
         f"I'll try my best not to fall asleeee... {emojis.zzz}"
     ),
 ]

@@ -3,6 +3,9 @@
 import asyncio
 import signal
 import sys
+
+import functools
+
 from typing import Optional
 
 from discord.ext import commands
@@ -41,7 +44,8 @@ class ExitHandler:
         async with self.lock:
             self.SIGTERM = True
         signal.signal(
-            signal.SIGTERM, lambda: asyncio.create_task(self.signal_terminate_handler)
+            signal.SIGTERM,
+            functools.partial(asyncio.create_task, self.signal_terminate_handler),
         )
 
     async def signal_interupt_handler(self, signal, frame):
@@ -53,15 +57,18 @@ class ExitHandler:
             self.SIGTERM = True
         print("Use CTRL-C again if you're sure you want to skip cleanup handlers.")
         signal.signal(
-            signal.SIGINT, lambda: asyncio.create_task(self.signal_terminate_handler)
+            signal.SIGINT,
+            functools.partial(asyncio.create_task, self.signal_terminate_handler),
         )
 
     def create_signals(self):
         signal.signal(
-            signal.SIGTERM, lambda: asyncio.create_task(self.signal_terminate_handler)
+            signal.SIGTERM,
+            functools.partial(asyncio.create_task, self.signal_terminate_handler),
         )
         signal.signal(
-            signal.SIGINT, lambda: asyncio.create_task(self.signal_interupt_handler)
+            signal.SIGINT,
+            functools.partial(asyncio.create_task, self.signal_interupt_handler),
         )
 
     def is_terminating(self) -> bool:

@@ -343,7 +343,7 @@ class DeveloperCommands:
                     # print(item.items())
                     if keys is None:
                         keys = list(item.keys())
-                    values.append(list(item.values()))
+                    values.extend(item.values())
 
                 incomplete_description_result = f"**The query returned .**"
                 ascii_table_truncated = "\n\nResults trimmed."

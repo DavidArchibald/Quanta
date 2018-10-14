@@ -8,7 +8,7 @@ from discord.ext import commands
 from typing import Union, List, Tuple, Optional
 
 from ..globals import emojis
-from ..globals.custom_types import DiscordReaction
+from ..globals.custom_types import DiscordReaction, DiscordChannel
 from .embed_builder import EmbedBuilder
 
 
@@ -222,6 +222,14 @@ def escape_markdown(text: str) -> str:
         text = text.replace(character, "\\" + character)
 
     return text
+
+
+def get_snowflake(ctx):
+    channel = ctx.channel if not isinstance(ctx, DiscordChannel) else ctx
+    if isinstance(channel, discord.abc.PrivateChannel):
+        return channel.id
+    elif isinstance(ctx.channel, discord.abc.GuildChannel):
+        return channel.guild.id
 
 
 def setup(bot: commands.Bot):
