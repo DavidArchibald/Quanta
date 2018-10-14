@@ -145,8 +145,7 @@ class Database:
 
         if self._cache is None:
             with await self._redis_pool as connection:
-                await self._redis.select(0)
-                prefix = await connection.execute("GET", snowflake)
+                prefix = await connection.execute("GET", f"channel-{snowflake}")
         else:
             prefix = self._cache.get(snowflake, None)
 
@@ -156,8 +155,7 @@ class Database:
 
             if self._cache is None:
                 with await self._redis_pool as connection:
-                    await self._redis.select(0)
-                    await connection.execute("SET", snowflake, prefix)
+                    await connection.execute("SET", f"channel:{snowflake}", prefix)
             else:
                 self._cache.set(snowflake, prefix)
         else:
@@ -168,8 +166,11 @@ class Database:
     def acquire(self, timeout=None):
         return asyncpg.pool.PoolAcquireContext(self._pool, timeout)
 
-    def get_pool(self):
-        return self._redis_pool
+    def redis_is_connected(self):
+        return self._redis_pool is not None
+
+    async def redis_connection(self):
+        return await self._redis_pool
 
     async def _get_prefix(self, snowflake: int) -> str:
         async with self.acquire() as connection:
@@ -214,9 +215,9 @@ class Database:
                     prefix,
                     snowflake,
                 )
-                if self._cache is None:
+                if self.redis_is_connected():
                     with await self._redis_pool as connection:
-                        await connection.execute("SET", snowflake, prefix)
+                        await connection.execute("SET", f"channel:{snowflake}", prefix)
                 else:
                     self._cache.set(snowflake, prefix)
 
@@ -239,7 +240,7 @@ class Database:
 
         await self._pool.terminate()
 
-        if self._redis_pool is not None:
+        if self.redis_is_connected():
             self._redis_pool.close()
 
         self._pool = None
