@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 
 import asyncio
-import signal
-import sys
+from discord.ext import commands
 
+import signal
 import functools
 
 from typing import Optional
 
-from discord.ext import commands
+from ..globals import variables
 
 
 class ExitHandler:
@@ -29,8 +29,7 @@ class ExitHandler:
             self.commands_running -= 1
 
             if self.SIGTERM is True and self.commands_running == 0:
-                await ctx.bot.logout()
-                sys.exit(0)
+                await variables.bot.logout()
                 return
 
     async def on_command_error(self, ctx: commands.Context, error: Exception):
@@ -39,7 +38,8 @@ class ExitHandler:
     async def signal_terminate_handler(self, signal, frame):
         signal.signal(signal.SIGTERM, self.original_sigterm)
         if self.SIGTERM is True or self.commands_running == 0:
-            sys.exit(0)
+            await variables.bot.logout()
+            return
 
         async with self.lock:
             self.SIGTERM = True
@@ -51,7 +51,8 @@ class ExitHandler:
     async def signal_interupt_handler(self, signal, frame):
         signal.signal(signal.SIGINT, self.original_sigint)
         if self.SIGTERM is True or self.commands_running == 0:
-            sys.exit(0)
+            await variables.bot.logout()
+            return
 
         async with self.lock:
             self.SIGTERM = True
@@ -78,7 +79,8 @@ class ExitHandler:
         async with self.lock:
             self.SIGTERM = True
         if self.commands_running == 0:
-            sys.exit(0)
+            await variables.bot.logout()
+            return
 
     async def cancel_terminate(self):
         async with self.lock:

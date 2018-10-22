@@ -106,7 +106,7 @@ class DeveloperCommands:
                     await message.remove_reaction(emojis.loading, ctx.bot.user)
                 await message.edit(content="Goodbye!")
                 await ctx.bot.logout()
-                sys.exit(0)
+                return
             await asyncio.sleep(1)
 
         if commands_running > 0:
@@ -125,7 +125,6 @@ class DeveloperCommands:
             await message.edit(content="Goodbye!")
 
         await ctx.bot.logout()
-        sys.exit(0)
 
     @commands.command(
         name="GuildInfo", aliases=["guild-info"], usage="guildinfo", hidden=True

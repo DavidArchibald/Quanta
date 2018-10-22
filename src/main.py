@@ -15,7 +15,7 @@ import re
 
 from .globals import variables
 from .handlers import exit_handling
-from .helpers import database_helper, logs_helper
+from .helpers import database_helper, logs_helper, session_helper
 
 from typing import List
 
@@ -85,16 +85,15 @@ async def not_bot(message: discord.Message) -> bool:
 
 
 if __name__ == "__main__":
+    logs_helper.start_logging()
     exit_handler = exit_handling.init(bot)
 
     # Because asynchronous things can't be run until the bot loop is set up.
     loop = asyncio.get_event_loop()
     loop.run_until_complete(database.connect())
 
-    logs_helper.start_logging()
-
-    variables.bot = bot
     variables.database = database
+    variables.bot = bot
     variables.exit_handler = exit_handler
 
     # The help command has to be removed before the cogs are loaded.
@@ -110,4 +109,13 @@ if __name__ == "__main__":
     bot_info = config["bot_info"]
     token = bot_info["token"]
 
-    bot.run(token)
+    try:
+        loop.run_until_complete(bot.start(token))
+    except KeyboardInterrupt:
+        loop.run_until_complete(bot.logout())
+    finally:
+        loop.run_until_complete(session_helper.close_session())
+        loop.run_until_complete(database.close(warn=False))
+        bot._do_cleanup()
+
+        loop.close()

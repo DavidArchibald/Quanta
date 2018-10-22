@@ -230,7 +230,7 @@ class Database:
 
         return self._pool is not None
 
-    async def close(self, timeout: int = 10):
+    async def close(self, timeout: int = 10, warn=True):
         """Closes the connection to the database."""
         if self._pool is None:
             raise RuntimeWarning("The connection has already been closed.")
@@ -238,10 +238,12 @@ class Database:
         if timeout not in (0, -1, None):
             await asyncio.wait_for(self._pool.close(), timeout)
 
-        await self._pool.terminate()
+        if self._pool is not None:
+            self._pool.terminate()
 
         if self.redis_is_connected():
             self._redis_pool.close()
 
         self._pool = None
-        logging.warn('Closed the database! Falling back to "?" prefix mode.')
+        if warn:
+            logging.warn('Closed the database! Falling back to "?" prefix mode.')
