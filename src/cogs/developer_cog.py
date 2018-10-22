@@ -66,17 +66,17 @@ class DeveloperCommands:
         shutting_down = "Shutting down..."
         if isinstance(wait, str) and wait.casefold() in ("now", "immediately", "force"):
             wait = 0
-            commands_running = exit_handler.get_commands_running()
+            commands_running = exit_handler.get_commands_running() - 1
             if commands_running > 0:
                 confirm, message = await confirm_action(
                     ctx,
                     message=(
                         f"This will leave {commands_running} commands hanging. "
-                        "Are you sure you want to force shutdown?",
+                        "Are you sure you want to force shutdown?"
                     ),
                 )
                 if not confirm:
-                    await message.edit(content="I'll keep runnin' then.")
+                    await message.edit(content="I'll keep running then.")
                     return
 
         if message is not None:
@@ -108,12 +108,13 @@ class DeveloperCommands:
                 return
             await asyncio.sleep(1)
 
+        try:
+            await message.clear_reactions()
+        except discord.HTTPException:
+            await message.remove_reaction(emojis.loading, ctx.bot.user)
+
         if commands_running > 0:
             s = "s" if commands_running != 1 else ""
-            try:
-                await message.clear_reactions()
-            except discord.HTTPException:
-                await message.remove_reaction(emojis.loading, ctx.bot.user)
             logging.warn(
                 f"Forcing shutdown! {commands_running} command{s} left hanging."
             )
