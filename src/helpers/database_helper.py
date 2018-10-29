@@ -27,6 +27,7 @@ class Database:
         self._database_info = None
         self._redis_config = None
         self._redis = None
+        self._redis_ttl = 60
         self._redis_pool = None
         self._pool = None
         self._loop = loop
@@ -143,9 +144,12 @@ class Database:
         elif isinstance(channel, discord.abc.GuildChannel):
             snowflake = str(channel.guild.id)
 
-        if self._cache is None:
-            with await self._redis_pool as connection:
-                prefix = await connection.execute("GET", f"channel-{snowflake}")
+        if self.redis_is_connected:
+            with self._redis_pool.get() as connection:
+                transaction = self._redis.multi_exec()
+                prefix = transaction.get(f"channel-{snowflake}")
+                connection.expire(f"channel-{snowflake}", self._redis_ttl)
+                prefix, _ = await transaction.execute()
         else:
             prefix = self._cache.get(snowflake, None)
 
@@ -153,9 +157,11 @@ class Database:
             # Calling this directly won't cache it.
             prefix = await self._get_prefix(snowflake)
 
-            if self._cache is None:
-                with await self._redis_pool as connection:
-                    await connection.execute("SET", f"channel:{snowflake}", prefix)
+            if self.redis_is_connected:
+                async with self._redis_pool.get() as connection:
+                    await connection.execute(
+                        "SETEX", f"channel:{snowflake}", self._redis_ttl, prefix
+                    )
             else:
                 self._cache.set(snowflake, prefix)
         else:
@@ -166,6 +172,7 @@ class Database:
     def acquire(self, timeout=None):
         return asyncpg.pool.PoolAcquireContext(self._pool, timeout)
 
+    @property
     def redis_is_connected(self):
         return self._redis_pool is not None
 
@@ -216,7 +223,7 @@ class Database:
                     snowflake,
                 )
                 if self.redis_is_connected():
-                    with await self._redis_pool as connection:
+                    async with self._redis_pool.get() as connection:
                         await connection.execute("SET", f"channel:{snowflake}", prefix)
                 else:
                     self._cache.set(snowflake, prefix)
