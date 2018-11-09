@@ -145,7 +145,7 @@ class Database:
             snowflake = str(channel.guild.id)
 
         if self.redis_is_connected:
-            with self._redis_pool.get() as connection:
+            async with self._redis_pool.get() as connection:
                 transaction = self._redis.multi_exec()
                 prefix = transaction.get(f"channel-{snowflake}")
                 connection.expire(f"channel-{snowflake}", self._redis_ttl)
@@ -176,6 +176,7 @@ class Database:
     def redis_is_connected(self):
         return self._redis_pool is not None
 
+    @property
     async def redis_connection(self):
         return await self._redis_pool
 
