@@ -85,7 +85,6 @@ class ExitHandler:
     async def cancel_terminate(self):
         async with self.lock:
             self.SIGTERM = False
-        self.lock.release()
 
     def get_commands_running(self) -> int:
         return self.commands_running

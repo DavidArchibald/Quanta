@@ -22,7 +22,6 @@ class AdminCommands:
     icon = "<:quantahammer:473960604521201694>"
 
     def __init__(self) -> None:
-        self.database = variables.database
         self.clearing_channels: List[discord.TextChannel] = []
 
     @commands.command(name="Purge", usage="purge (count) (user)")
@@ -60,12 +59,9 @@ class AdminCommands:
 
     @commands.command(name="ClearAll", aliases=["clear-all"], usage="clearall")
     @commands.guild_only()
-    @commands.cooldown(
-        1, 86400, commands.BucketType.user
-    )  # So one person can't abuse the feature.
-    @commands.cooldown(
-        1, 86400, commands.BucketType.channel
-    )  # Only allows this to be used once a day in a channel.
+    # The command is only able to be used once per channel and once per user every day.
+    @commands.cooldown(1, 86400, commands.BucketType.user)
+    @commands.cooldown(1, 86400, commands.BucketType.channel)
     @commands.has_permissions(manage_messages=True)
     async def clear_all(self, ctx: commands.Context):
         """Remove all messsages.
@@ -83,9 +79,8 @@ class AdminCommands:
             await confirm_message.edit(content="Clearing messages cancelled")
             return
 
-        prefix = await self.database.get_prefix(ctx)
         await confirm_message.edit(
-            content=f"Deleting messages... Stop with {prefix}stopclearing"
+            content=f"Deleting messages... Stop with {ctx.invoked_with}"
         )
         self.clearing_channels.append(ctx.channel.id)
 
@@ -102,9 +97,9 @@ class AdminCommands:
     @commands.command(
         name="StopClearing", usage="stopclearing", aliases=["stop-clearing"]
     )
-    @commands.cooldown(
-        1, 86400, commands.BucketType.channel
-    )  # Only allow this to be used once a day in a channel.
+    # The command is only able to be used once per channel.
+    # It is intentional that an individual user can cancel unlimited.
+    @commands.cooldown(1, 86400, commands.BucketType.channel)
     @commands.guild_only()
     @commands.has_permissions(manage_messages=True)
     async def stop_clearing(self, ctx: commands.Context):
@@ -130,7 +125,7 @@ class AdminCommands:
         Keyword Arguments:
             reason {str} -- Why the user is being kicked (default: {""})
         """
-        for_reason = f"For {reason}" if reason is not None and reason != "" else ""
+        for_reason = f" for {reason}" if reason != "" else ""
 
         try:
             await ctx.kick(user)
@@ -138,7 +133,7 @@ class AdminCommands:
             await ctx.send(f"Could not kick user {user}!")
             return
 
-        if not user.is_blocked():
+        if user.is_blocked() is False:
             try:
                 await user.send(
                     f"You were kicked from the server {ctx.server} for {for_reason}."
@@ -146,7 +141,7 @@ class AdminCommands:
             except discord.HTTPException:
                 pass
 
-        await ctx.send(f"Kicked {user} for {for_reason}.")
+        await ctx.send(f"Kicked {user}{for_reason}.")
 
     @commands.command(
         name="SetPrefix",
@@ -162,73 +157,73 @@ class AdminCommands:
             prefix {str} -- The prefix to set the guild to use.
         """
 
+        if not variables.database.is_connected:
+            await ctx.send(
+                "You can't change the prefix right now: the database is closed."
+            )
+            return
+
         confirm = None
         message = None
-        no_change_message = "Prefix has not been changed."
+        no_change_message = "The prefix has not been changed."
 
-        current_prefix = await self.database.get_prefix(ctx)
+        current_prefix = await variables.database.get_prefix(ctx)
         if prefix == current_prefix:
             await ctx.send(f"The prefix is already set to `{prefix}`!")
             return
 
         if prefix is None:
             confirm, message = await confirm_action(
-                ctx,
-                (
-                    "You may have forgotten the prefix."
-                    "Do you want to remove the need for a prefix?",
-                ),
+                ctx, "You haven't supplied a prefix, do you want to remove the prefix?"
             )
             if not confirm:
                 await message.edit(content=no_change_message)
                 return
             prefix = ""
 
-        if not isinstance(prefix, str):
-            prefix = str(prefix)
-
-        has_reference = re.compile(
-            r"(<@(?:!?|&|#)\d+>)"
-        )  # Checks if the string has a user or role mention or a channel "reference".
+        # Checks if the string has a user or role mention or a channel.
+        # This will be collectively called "references".
+        has_reference = re.compile(r"(<@(?:!?|&|#)\d+>)")
         references = re.findall(has_reference, prefix)
         if references not in ([], None) or "@everyone" in prefix or "@here" in prefix:
-            # References have a zero width joiner to doubly prevent mentions
             raw_bot_mention = f"<@{ctx.bot.user.id}>"
             bot_mention = ctx.bot.user.mention
             if prefix == raw_bot_mention:
                 await ctx.send(
                     (
-                        f"I already respond to {bot_mention}."
+                        f"I already respond to {bot_mention}. "
                         "No need to set it to the prefix."
                     )
                 )
             elif raw_bot_mention in references:
                 await ctx.send(
                     (
-                        f"I already respond to {bot_mention},"
+                        f"I already respond to {bot_mention}, "
                         "adding extra characters just makes it confusing."
                     )
                 )
             else:
+                # \u200d is a zero width joiner
+                # This prevents them from being valid references,
+                # while appearing like they are.
                 await ctx.send(
                     (
-                        'You can\'t include "references" such as @user, #‍channel,'
-                        "@‍everyone, or @‍here in your prefix, sorry."
+                        'You can\'t include "references" such as '
+                        "@\u200duser, #\u200dchannel, @\u200deveryone, or @\u200dhere "
+                        "in your prefix, sorry."
                     )
                 )
             return
 
-        prefix_casefold = prefix.casefold()
-
+        # Removes wrapped quotes ie 'lorem', "ipsum". "'dolor'", and '"sit"'
         boundary_quotes = re.compile(r"^([\"'])((((?!\1).)|\\\1)*)(\1)$")
         match = boundary_quotes.match(prefix)
-        while match:  # Removes wrapped quotes ie 'lorem', "ipsum" "'dolor'" '"sit"'
+        while match:
             prefix = prefix[1:-1]
             match = boundary_quotes.match(prefix)
-            prefix_casefold = prefix.casefold()
 
         if len(prefix) > 32:
-            await ctx.send(f"Your prefix can't be greater than 32 characters, sorry!")
+            await ctx.send(f"Sorry, your prefix can't be greater than 32 characters.")
             return
         elif len(prefix) > 10:
             confirm, message = await confirm_action(
@@ -242,23 +237,24 @@ class AdminCommands:
                 await message.edit(content=no_change_message)
                 return
 
-        if "'" in prefix_casefold or '"' in prefix_casefold:
+        if "'" in prefix or '"' in prefix:
             await ctx.send(
                 (
-                    "Quotes can mess with how I parses arguments,"
-                    "so you can't use quotes in your prefix, sorry!"
+                    "Sorry, quotes can mess with how I parses arguments, "
+                    "so you can't use quotes in your prefix."
                 )
             )
             return
 
         markdown = ("*", "\\", "__", "~~", "`")
-        if any(character in prefix_casefold for character in markdown):
+        if any(character in prefix for character in markdown):
             confirm, message = await confirm_action(
                 ctx,
                 (
-                    "Markdown can be annoying!"
-                    f'Are you sure you want to set the prefix to "{prefix}"?'
-                    "It may format stuff in unexpected ways.",
+                    "Markdown can be annoying! "
+                    f'Are you sure you want to set the prefix to "{prefix}"? '
+                    "It may format stuff in unexpected ways and "
+                    "make it harder to replicate."
                 ),
             )
             if not confirm:
@@ -266,15 +262,15 @@ class AdminCommands:
                 return
 
         try:
-            await self.database.set_prefix(ctx, prefix)
+            await variables.database.set_prefix(ctx, prefix)
         except RuntimeError:
-            no_database = "The prefix cannot be set without a connected database."
+            database_closed = "The database has unexpectedly closed."
             if message is not None:
-                await message.edit(content=no_database)
+                await message.edit(content=database_closed)
             else:
-                await ctx.send(no_database)
+                await ctx.send(database_closed)
             return
-        except Exception:
+        except BaseException:
             unexpected_exception = "An unexpected exception occurred."
             logging.warning(traceback.format_exc())
             if message is not None:

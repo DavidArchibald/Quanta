@@ -7,6 +7,7 @@ import sys
 
 
 def start_logging():
+    log_level = logging.INFO
     log_format = logging.Formatter(
         "%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s"
     )
@@ -18,13 +19,13 @@ def start_logging():
     logger = logging.getLogger()
 
     stream_handler = logging.StreamHandler(sys.stdout)
-    stream_handler.setLevel(logging.INFO)
+    stream_handler.setLevel(log_level)
     stream_handler.setFormatter(log_format)
 
     bot_log_handler = logging.handlers.RotatingFileHandler(
         filename=bot_log_file, maxBytes=2000, backupCount=5
     )
-    bot_log_handler.setLevel(logging.INFO)
+    bot_log_handler.setLevel(log_level)
     bot_log_handler.setFormatter(log_format)
 
     logger.addHandler(bot_log_handler)

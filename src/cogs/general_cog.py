@@ -27,8 +27,7 @@ import jsonschema
 import xml.etree.cElementTree
 import yaml
 
-from ..globals import emojis, latency, uptime
-from ..helpers import session_helper
+from ..globals import emojis, latency, uptime, variables
 from ..helpers.helper_functions import confirm_action, wait_for_reactions
 
 
@@ -378,9 +377,8 @@ class GeneralCommands:
                 "&format=plaintext"
             )
 
-            session = await session_helper.get_session()
             try:
-                async with session.get(query_url) as response:
+                async with variables.session.get(query_url) as response:
                     text = await response.text()
                     try:
                         response_tree = xml.etree.cElementTree.fromstring(text)
@@ -458,9 +456,8 @@ class GeneralCommands:
             "opentdb did not respond with the expected format."
         )
 
-        session = await session_helper.get_session()
         try:
-            async with session.get(url) as response:
+            async with variables.session.get(url) as response:
                 if response.status != 200:
                     if ctx is not None:
                         await ctx.send(trivia_wrong_format)

@@ -3,6 +3,8 @@
 """A Discord.py bot."""
 
 import asyncio
+import aiohttp
+
 import discord
 from discord.ext import commands
 import discord.utils
@@ -13,11 +15,12 @@ import yaml
 
 import re
 
+from typing import List
+
 from .globals import variables
 from .handlers import exit_handling
-from .helpers import database_helper, logs_helper, session_helper
+from .helpers import database_helper, logs_helper
 
-from typing import List
 
 exit_handler = None
 
@@ -50,7 +53,7 @@ async def get_prefix_wrapper(bot: commands.Bot, message: discord.Message) -> Lis
         isinstance(ctx.message.channel, discord.abc.PrivateChannel)
         and "" not in prefixes
     ):
-        # This enables the use of no prefixes in PrivateChannels by default.
+        # This enables the use of no prefix in PrivateChannels by default.
         prefixes.append("")
     return commands.when_mentioned_or(*prefixes)(bot, message)
 
@@ -69,9 +72,9 @@ async def on_message(message: discord.Message):
         prefixes = await get_prefix_wrapper(bot, message)
         if not isinstance(prefixes, tuple):
             prefixes = tuple(prefixes)
-        to_rot_command = re.compile("(.?(rotate|rot)(?! ))")
+        to_rot_command = re.compile("(rot(ate)?(?! ))")
         if message.content.startswith(prefixes):
-            # Add a space between rot or rotate and it's degree.
+            # Adding a space between rot/rotate and the degree makes it a valid command.
             message.content = re.sub(
                 to_rot_command, lambda match: match.group(0) + " ", message.content
             )
@@ -84,13 +87,19 @@ async def not_bot(message: discord.Message) -> bool:
     return not message.author.bot
 
 
+async def create_session():
+    # This is here simply because aiohttp dislikes being created outside a coroutine.
+    if variables.session is None:
+        variables.session = aiohttp.ClientSession()
+
+
 if __name__ == "__main__":
     logs_helper.start_logging()
     exit_handler = exit_handling.init(bot)
 
-    # Because asynchronous things can't be run until the bot loop is set up.
     loop = asyncio.get_event_loop()
     loop.run_until_complete(database.connect())
+    loop.run_until_complete(create_session())
 
     variables.database = database
     variables.bot = bot
@@ -114,7 +123,8 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         loop.run_until_complete(bot.logout())
     finally:
-        loop.run_until_complete(session_helper.close_session())
+        # cleanup
+        loop.run_until_complete(variables.session.close())
         loop.run_until_complete(database.close(warn=False))
         bot._do_cleanup()
 

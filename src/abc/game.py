@@ -6,8 +6,6 @@ from typing import List, Optional, Tuple, Union
 from ..helpers.helper_functions import get_snowflake
 from ..globals.custom_types import DiscordReaction
 
-# from ..globals.variables import database
-
 games = []
 
 

@@ -26,7 +26,7 @@ class Database:
     ) -> None:
         self._database_info = None
         self._redis_config = None
-        self._redis = None
+        self.redis = None
         self._redis_ttl = 60
         self._redis_pool = None
         self._pool = None
@@ -36,10 +36,9 @@ class Database:
         source = os.path.dirname(os.path.dirname(__file__))
         secrets_path = secrets_path or "secrets/config.yaml"
 
-        if not os.path.isabs(secrets_path):
+        if os.path.isabs(secrets_path) is False:
             secrets_path = os.path.join(source, secrets_path)
 
-        # Opens ./src/secrets/config.yaml or the passed in path.
         with open(secrets_path, "r") as secrets_file:
             try:
                 config = yaml.safe_load(secrets_file)
@@ -73,7 +72,7 @@ class Database:
                 self._database_info = config["database_info"]
 
             if "redis" in config:
-                redis_scheme = {
+                redis_schema = {
                     "type": "object",
                     "properties": {
                         "address": {"type": "string"},
@@ -81,7 +80,7 @@ class Database:
                     },
                 }
                 try:
-                    jsonschema.validate(config["redis"], redis_scheme)
+                    jsonschema.validate(config["redis"], redis_schema)
                 except jsonschema.exceptions.ValidationError:
                     self._cache = {}
                 else:
@@ -114,13 +113,11 @@ class Database:
                 self._redis_config["maxsize"] = min(5, minsize + 5)
 
             try:
-                self._redis_pool = await aioredis.create_redis_pool(
-                    **self._redis_config
-                )
-                self._redis = aioredis.Redis(self._redis_pool)
+                self._redis_pool = await aioredis.create_pool(**self._redis_config)
+                self.redis = aioredis.Redis(self._redis_pool)
             except OSError:
                 self._redis_pool = None
-                self._redis = None
+                self.redis = None
                 self._cache = {}
                 logging.warn("Could not connect to Redis with the given credentials.")
 
@@ -146,9 +143,9 @@ class Database:
 
         if self.redis_is_connected:
             async with self._redis_pool.get() as connection:
-                transaction = self._redis.multi_exec()
+                transaction = self.redis.multi_exec()
                 prefix = transaction.get(f"channel-{snowflake}")
-                connection.expire(f"channel-{snowflake}", self._redis_ttl)
+                transaction.expire(f"channel-{snowflake}", self._redis_ttl)
                 prefix, _ = await transaction.execute()
         else:
             prefix = self._cache.get(snowflake, None)
@@ -229,6 +226,7 @@ class Database:
                 else:
                     self._cache.set(snowflake, prefix)
 
+    @property
     def is_connected(self) -> bool:
         """Returns if the database is connected or not.
 
