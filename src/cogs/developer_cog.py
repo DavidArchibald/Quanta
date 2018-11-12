@@ -35,7 +35,6 @@ class DeveloperCommands:
     icon = "<:quantacode:473976436051673091>"
 
     def __init__(self) -> None:
-        self.database = variables.database
         self._last_result: Optional[str] = None
 
     @commands.command(name="Say", aliases=["speak"], usage="say [message]", hidden=True)
@@ -92,8 +91,7 @@ class DeveloperCommands:
 
         await message.add_reaction(emojis.loading)
 
-        # This won't terminate it for 30 seconds
-        # Because this command will still be running.
+        # This won't ever close the bot, because this command will still be running.
         await exit_handler.graceful_terminate()
 
         for _ in range(0, wait):
@@ -115,11 +113,9 @@ class DeveloperCommands:
 
         if commands_running > 0:
             s = "s" if commands_running != 1 else ""
-            logging.warn(
-                f"Forcing shutdown! {commands_running} command{s} left hanging."
-            )
+            logging.warn(f"Forcing shutdown! {commands_running} command{s} aborted.")
             await message.edit(
-                content=f"{commands_running} command{s} aborted to allow shutdown."
+                content=f"{commands_running} command{s} aborted during shutdown."
             )
         else:
             await message.edit(content="Goodbye!")
@@ -140,20 +136,17 @@ class DeveloperCommands:
         embed = discord.Embed()
 
         embed.set_thumbnail(url=guild.icon_url)
+
         embed.add_field(name="Name", value=guild.name)
         embed.add_field(name="ID", value=guild.id)
         embed.add_field(name="Created at", value=guild.created_at.strftime("%x"))
         embed.add_field(name="Owner", value=guild.owner)
         embed.add_field(name="Members", value=guild.member_count)
         embed.add_field(name="Channels", value=len(guild.channels))
-        embed.add_field(
-            name="Roles", value=len(guild.role_hierarchy) - 1
-        )  # Remove @everyone
+        embed.add_field(name="Roles", value=len(guild.role_hierarchy) - 1)
         embed.add_field(name="Emoji", value=len(guild.emojis))
         embed.add_field(name="Region", value=guild.region.name)
-        embed.add_field(
-            name="Icon URL", value=guild.icon_url or "This guild has no icon."
-        )
+        embed.add_field(name="Icon URL", value=guild.icon_url)
 
         await ctx.send(embed=embed)
 
@@ -174,14 +167,20 @@ class DeveloperCommands:
             arguments {str} -- The command's arguments.
         """
 
-        new_message = ctx.message
-        new_message.content = f"{ctx.prefix}{command} {arguments}"
+        # To work with discord.py's framework,
+        # ctx is changed to look like original command was the target command
+        # and then discord.py's internal functions are run.
+        command_message = ctx.message
+        command_message.content = f"{ctx.prefix}{command} {arguments}"
 
-        new_ctx = await ctx.bot.get_context(new_message)
-        await new_ctx.command._parse_arguments(new_ctx)  # Parses the arguments
-        await new_ctx.command.call_before_hooks(new_ctx)  # Calls command hooks
+        command_ctx = await ctx.bot.get_context(command_message)
 
-        await new_ctx.command.callback(*new_ctx.args, **new_ctx.kwargs)
+        # Converts the string arguments to Python datatypes.
+        await command_ctx.command._parse_arguments(command_ctx)
+        # Runs command hooks.
+        await command_ctx.command.call_before_hooks(command_ctx)
+
+        await command_ctx.command.callback(*command_ctx.args, **command_ctx.kwargs)
 
     @commands.command(name="Eval", aliases=["run"], usage="eval [code]", hidden=True)
     async def eval(self, ctx: commands.Context, *, code: str):
@@ -199,7 +198,7 @@ class DeveloperCommands:
             "bot": ctx.bot,
             "channel": ctx.channel,
             "ctx": ctx,
-            "database": self.database,
+            "database": variables.database,
             "guild": ctx.guild,
             "message": ctx.message,
             "_": self._last_result,
@@ -313,7 +312,7 @@ class DeveloperCommands:
         description_result = None
 
         query = cleanup_code(query, "sql")
-        async with self.database.acquire() as connection:
+        async with variables.database.acquire() as connection:
             statements = 1 + query.count(";")
             if query.endswith(";"):
                 statements -= 1
@@ -334,7 +333,7 @@ class DeveloperCommands:
 
             elapsed_time_str = f"Elapsed Time: {elapsed_time:.2f}ms"
 
-            if not has_multiple_statements:
+            if has_multiple_statements is False:
                 keys = None
                 values = []
                 for item in result:

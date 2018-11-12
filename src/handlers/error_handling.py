@@ -9,21 +9,18 @@ import traceback
 
 from fuzzywuzzy import process
 
-from ..globals import emojis, variables
+from ..globals import emojis
 from ..helpers.helper_functions import wait_for_reactions
 
 
 class CommandErrorHandler:
     """Handles any errors the bot will throw."""
 
-    def __init__(self) -> None:
-        self.database = variables.database
-
     async def on_command_error(self, ctx: commands.Context, error: BaseException):
         """The event triggered when an error is raised while invoking a command.
 
         Arguments:
-            ctx {commands.Context} -- Information about where the command was run.s
+            ctx {commands.Context} -- Information about where the command was run.
             error {Exception} -- The error the bot comes across.
         """
 
@@ -38,13 +35,22 @@ class CommandErrorHandler:
                 )
                 return
             elif isinstance(error, commands.BotMissingPermissions):
-                missing_perms = error.missing_perms
-                missing_permissions = (
-                    ", ".join(missing_perms[:-1]) + "and, " + missing_perms[-1]
-                )
-                await ctx.send(
-                    f"I don't have the permissions({missing_permissions}) to"
-                )
+                if len(error.missing_perms) == 1:
+                    missing_permissions = error.missing_perms[0]
+                elif len(error.missing_perms) == 2:
+                    missing_permissions = (
+                        f"{error.missing_perms[0]} and {error.missing_perms[1]}"
+                    )
+                else:
+                    missing_permissions = (
+                        ", ".join(error.missing_perms[:-1])
+                        + ", and"
+                        + error.missing_perms[-1]
+                    )
+
+                    await ctx.send(
+                        f"I don't have the permissions: {missing_permissions}) to"
+                    )
                 return
             is_owner = await ctx.bot.is_owner(ctx.message.author)
             if is_owner is True:

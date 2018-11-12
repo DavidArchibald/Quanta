@@ -13,7 +13,7 @@ from typing import Optional, Union
 
 
 class EmbedBuilder:
-    """Build's messages based upon different "states" the bot can be in."""
+    """Builds messages based upon different states."""
 
     def __init__(self) -> None:
         self._error_icon = "<:quantaerror:475409387863670810>"
@@ -74,12 +74,14 @@ class EmbedBuilder:
         embed = discord.Embed(
             title=f"{self._error_icon} {sad_error}",
             description=f"**{error}**",
-            colour=0xcc0000,
+            colour=0xCC0000,
         )
 
         return embed
 
-    def success(self, title, description, footer=None, trim=True):
+    def success(
+        self, title: str, description: str, footer: str = None, trim: bool = True
+    ):
         """Sends an embed based upon a successful scenario.
 
         Arguments:
@@ -111,7 +113,7 @@ class EmbedBuilder:
         embed = discord.Embed(
             title=f"{self._success_icon} {title}",
             description=f"{description}",
-            colour=0x00ff00,
+            colour=0x00FF00,
         )
 
         if footer is not None and footer != "":
@@ -151,7 +153,7 @@ class EmbedBuilder:
         embed = discord.Embed(
             title=f"{self._fail_icon} {title}",
             description=f"{description}",
-            colour=0x00ff00,
+            colour=0x00FF00,
         )
 
         return embed
@@ -161,5 +163,5 @@ class EmbedBuilder:
             if trim is False:
                 raise RuntimeError("The content is too long.")
 
-        embed = discord.Embed(title=title, description=content, colour=0x0000ff)
+        embed = discord.Embed(title=title, description=content, colour=0x0000FF)
         return embed

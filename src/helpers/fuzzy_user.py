@@ -40,23 +40,23 @@ class FuzzyUser(commands.Converter):
         if identifier.startswith(r"\<@") and identifier.endswith(">"):
             identifier = identifier[1:]
 
-        try:  # Try converting it with the built in UserConverter
+        try:
+            # Try converting it with the built in UserConverter
             # This will handle exact input in the order:
             # 1. User ID
-            # 1. User Mention
-            # 2. Username#discriminator
-            # 3. Username
+            # 2. User Mention
+            # 3. Username#discriminator
+            # 4. Username
             user = await commands.UserConverter().convert(ctx, identifier)
             return (user, None)
-        except:  # noqa: E722
-            # Ignore any error it gives out.
-            # This is only for efficiency.
+        except commands.BadArgument:
             pass
 
         # If in format <@{user id}> get only the user id.
         if identifier.startswith("<@") and identifier.endswith(">"):
             identifier = identifier[2:-1]
 
+        # Compiles a list of ids, names, and nicknames
         compares = [
             name
             for member in ctx.guild.members
@@ -65,9 +65,9 @@ class FuzzyUser(commands.Converter):
         ]
         results = process.extract(identifier, compares, limit=result_count)
         results = [result for result in results if result[1] > 5]
-        result_count = len(results)
+        result_count = len(results)  # may be less than the max.
 
-        if not results:
+        if results is None:
             return (identifier, None)
 
         # Filtering the result to a reasonable threshold could also help)

@@ -7,16 +7,16 @@ from discord.ext import commands
 
 from typing import Union, List, Tuple, Optional
 
+from .embed_builder import EmbedBuilder
 from ..globals import emojis
 from ..globals.custom_types import DiscordReaction, DiscordChannel
-from .embed_builder import EmbedBuilder
 
 
 build_embed = EmbedBuilder()
 
 
 class HelperCommands:
-    # Helper Commands is currently exposed for testing purposes.
+    # Helper Commands are exposed for testing purposes.
     @commands.command(name="Error", usage="error [error]")
     async def error(self, ctx: commands.Context):
         """Simulates error catching for testing.
@@ -33,7 +33,7 @@ class HelperCommands:
     @commands.command(name="Wait", usage="wait [time]")
     @commands.is_owner()
     async def wait(self, ctx: commands.Context, time: int = 1):
-        """Waits for a while. Mostly for testing .kill
+        """Waits for a while. Mostly for testing kill.
 
         Arguments:
             ctx {commands.Context} -- Information about where the command was run.

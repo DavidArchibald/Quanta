@@ -11,9 +11,6 @@ class CodeCommands:
 
     icon = "<:quantacode:473976436051673091>"
 
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
-
     @commands.command(
         name="Rotate",
         usage="rotate [degree]",
@@ -55,11 +52,9 @@ class CodeCommands:
             degree = degree % 26
 
         shift = str.maketrans(
-            ascii_lowercase + ascii_uppercase,  # Normal Alphabet
-            ascii_lowercase[degree:]  # Rotated Lowercase
-            + ascii_lowercase[:degree]
-            + ascii_uppercase[degree:]  # Rotated Uppercase
-            + ascii_uppercase[:degree],
+            ascii_uppercase + ascii_lowercase,  # Normal Alphabet
+            ascii_uppercase[degree:] + ascii_uppercase[:degree],  # Rotated Uppercase
+            +ascii_lowercase[degree:] + ascii_lowercase[:degree],  # Rotated Lowercase
         )
         rotated_message = message.translate(shift)
 
@@ -74,13 +69,6 @@ class CodeCommands:
 
         await ctx.send(embed=embed)
 
-    def get_embed(self, message, cipher, cipher_name=""):
-        embed = discord.Embed(
-            title=f"{cipher_name} Cipher", description=f"**{cipher}**", colour=0x00FF00
-        )
-        embed.set_footer(text=f"Original Message: {message}")
-        return embed
-
 
 def setup(bot: commands.Bot):
-    bot.add_cog(CodeCommands(bot))
+    bot.add_cog(CodeCommands())
