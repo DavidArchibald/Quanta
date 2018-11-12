@@ -178,7 +178,7 @@ class Database:
 
     @property
     async def redis_connection(self):
-        return await self._redis_pool
+        return self._redis_pool.get()
 
     async def _get_prefix(self, snowflake: int) -> str:
         async with self.acquire() as connection:
