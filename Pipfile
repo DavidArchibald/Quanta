@@ -14,7 +14,7 @@ psycopg2 = "==2.*"
 discord = {ref = "rewrite", git = "git://github.com/Rapptz/discord.py"}
 Django = ">=2.1.2,<3.*"
 python-Levenshtein = "==0.12.*"
-PyYAML = "==3.*"
+PyYAML = ">=4.2b1,<5.*"
 tabulate = "*"
 aioredis = "*"
 jsonschema = "*"
