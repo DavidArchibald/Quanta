@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from typing import Optional, Tuple
+
 import discord
 from discord.ext import commands
 
@@ -7,10 +9,7 @@ from fuzzywuzzy import process
 
 from ..globals import emojis
 from ..globals.custom_types import DiscordUser
-
 from .helper_functions import wait_for_reactions
-
-from typing import Tuple, Optional
 
 
 class FuzzyUser(commands.Converter):

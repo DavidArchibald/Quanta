@@ -1,31 +1,28 @@
 #!/usr/bin/env python3
 
 import asyncio
-import aiohttp
-import discord
-from discord.ext import commands
-
 import copy
 import datetime
-import os
-import textwrap
+import html
+import logging
 import math
+import os
 import random
 import re
-import urllib
-
-import logging
+import textwrap
 import traceback
+import urllib
+import xml.etree.cElementTree
 
-from fuzzywuzzy import process
+import aiohttp
+import discord
+import jsonschema
+import yaml
+from discord.ext import commands
 
 import humanize
-
-import html
 import ujson
-import jsonschema
-import xml.etree.cElementTree
-import yaml
+from fuzzywuzzy import process
 
 from ..globals import emojis, latency, uptime
 from ..helpers import session_helper

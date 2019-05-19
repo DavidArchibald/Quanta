@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
+from string import ascii_lowercase, ascii_uppercase
+
 import discord
 from discord.ext import commands
-
-from string import ascii_lowercase, ascii_uppercase
 
 
 class CodeCommands:

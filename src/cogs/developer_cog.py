@@ -1,29 +1,23 @@
 #!/usr/bin/env python3
 
+import asyncio
+import contextlib
+import io
+import logging
+import re
+import textwrap
+import time
+from typing import Optional, Union
+
 import discord
 from discord.ext import commands
 
-import time
-
-import logging
-
-import asyncio
-
-import contextlib
-import io
-import re
-
-import textwrap
 import tabulate
 
-from typing import Union, Optional
-
+from ..globals import emojis, variables
+from ..handlers import exit_handling
 from ..helpers import embed_builder
 from ..helpers.helper_functions import confirm_action
-
-from ..handlers import exit_handling
-
-from ..globals import emojis, variables
 
 exit_handler = exit_handling.get_exit_handler()
 build_embed = embed_builder.EmbedBuilder()

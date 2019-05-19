@@ -1,6 +1,6 @@
-import discord
-
 from typing import Union
+
+import discord
 
 DiscordReaction = Union[discord.Reaction, discord.Emoji, discord.PartialEmoji, str]
 DiscordUser = Union[discord.abc.User, str]

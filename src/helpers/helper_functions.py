@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 
 import asyncio
+from typing import List, Optional, Tuple, Union
 
 import discord
 from discord.ext import commands
 
-from typing import Union, List, Tuple, Optional
-
 from ..globals import emojis
-from ..globals.custom_types import DiscordReaction, DiscordChannel
+from ..globals.custom_types import DiscordChannel, DiscordReaction
 from .embed_builder import EmbedBuilder
-
 
 build_embed = EmbedBuilder()
 

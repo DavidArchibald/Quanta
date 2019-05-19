@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
-import discord
-from discord.ext import commands
-
 import asyncio
 import sys
 import traceback
+
+import discord
+from discord.ext import commands
 
 from fuzzywuzzy import process
 

@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 
+import random
+from typing import Optional, Union
+
 import discord
 from discord.ext import commands
 
-import random
-
 from ..globals.embed_builder import sad_errors
-
-from typing import Optional, Union
 
 # TODO: Implement trimming better.
 
@@ -74,7 +73,7 @@ class EmbedBuilder:
         embed = discord.Embed(
             title=f"{self._error_icon} {sad_error}",
             description=f"**{error}**",
-            colour=0xcc0000,
+            colour=0xCC0000,
         )
 
         return embed
@@ -111,7 +110,7 @@ class EmbedBuilder:
         embed = discord.Embed(
             title=f"{self._success_icon} {title}",
             description=f"{description}",
-            colour=0x00ff00,
+            colour=0x00FF00,
         )
 
         if footer is not None and footer != "":
@@ -151,7 +150,7 @@ class EmbedBuilder:
         embed = discord.Embed(
             title=f"{self._fail_icon} {title}",
             description=f"{description}",
-            colour=0x00ff00,
+            colour=0x00FF00,
         )
 
         return embed
@@ -161,5 +160,5 @@ class EmbedBuilder:
             if trim is False:
                 raise RuntimeError("The content is too long.")
 
-        embed = discord.Embed(title=title, description=content, colour=0x0000ff)
+        embed = discord.Embed(title=title, description=content, colour=0x0000FF)
         return embed

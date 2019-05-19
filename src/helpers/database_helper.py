@@ -1,21 +1,19 @@
 #!/usr/bin/env python3
 
-import os
-import logging
-
-import discord
-from discord.ext import commands
-
 import asyncio
-import aioredis
-import asyncpg
-import jsonschema
-import yaml
-
+import logging
+import os
 import traceback
 
-from .helper_functions import HelperCommands
+import discord
+import jsonschema
+import yaml
+from discord.ext import commands
 
+import aioredis
+import asyncpg
+
+from .helper_functions import HelperCommands
 
 helperCommands = HelperCommands()
 

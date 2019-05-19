@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 
 import asyncio
-from discord.ext import commands
-
-import signal
 import functools
-
+import signal
 from typing import Optional
+
+from discord.ext import commands
 
 from ..globals import variables
 

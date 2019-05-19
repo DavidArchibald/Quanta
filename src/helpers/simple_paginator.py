@@ -3,9 +3,9 @@
 """Code by Myst(EvieePy)"""
 
 import asyncio
-import discord
-
 from typing import List
+
+import discord
 
 
 async def pager(entries, chunk: int):
