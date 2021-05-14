@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-asyncpg = "==0.17.*"
+asyncpg = "==0.21.*"
 aiodns = "==1.*"
 aiohttp = "==3.*"
 cchardet = "==2.*"
